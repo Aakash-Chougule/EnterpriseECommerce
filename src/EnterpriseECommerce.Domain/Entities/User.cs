@@ -59,25 +59,25 @@ public class User
     // ------------------------------------------------------------
 
     public User(
-        string firstName,
-        string lastName,
-        string email,
-        string passwordHash,
-        Guid roleId)
+     string firstName,
+     string lastName,
+     string email,
+     string passwordHash,
+     Guid roleId,
+     string? phoneNumber = null)
     {
         Id = Guid.NewGuid();
 
         FirstName = firstName;
         LastName = lastName;
-
         Email = email;
-
         PasswordHash = passwordHash;
 
         RoleId = roleId;
 
-        IsActive = true;
+        PhoneNumber = phoneNumber;
 
+        IsActive = true;
         CreatedAt = DateTime.UtcNow;
     }
 
@@ -91,6 +91,19 @@ public class User
         LastName = lastName;
 
         UpdatedAt = DateTime.UtcNow;
+    }
+    /// <summary>
+    /// Associates the user with an application role.
+    ///
+    /// The RoleId foreign key and navigation property are updated
+    /// together so the domain object remains internally consistent.
+    /// </summary>
+    public void AssignRole(Role role)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+
+        Role = role;
+        RoleId = role.Id;
     }
 
     public void Deactivate()
