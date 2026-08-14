@@ -1,21 +1,46 @@
+using EnterpriseECommerce.Application.Interfaces;
+using EnterpriseECommerce.Application.Services;
 using EnterpriseECommerce.Infrastructure.Persistence;
+using EnterpriseECommerce.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------------
+// Add services to the dependency injection container.
+// ------------------------------------------------------------
+
+builder.Services.AddControllers();
+
+// Swagger / OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// ------------------------------------------------------------
 // Database Configuration
 // ------------------------------------------------------------
-// Registers Entity Framework Core with the dependency injection
-// container and configures PostgreSQL as the database provider.
+// AppDbContext uses Entity Framework Core to communicate
+// with PostgreSQL through the Npgsql provider.
+// ------------------------------------------------------------
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddControllers();
+// ------------------------------------------------------------
+// Repository Registration
+// ------------------------------------------------------------
+// The application depends on IProductRepository,
+// while Infrastructure provides ProductRepository.
+// ------------------------------------------------------------
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
+// ------------------------------------------------------------
+// Business Service Registration
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<ProductService>();
 
 var app = builder.Build();
 
@@ -29,16 +54,22 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Redirect HTTP requests to HTTPS.
 app.UseHttpsRedirection();
 
-// Enables authorization middleware.
-// Authentication will be configured in a later step.
 app.UseAuthorization();
 
-// Maps controller endpoints such as:
-// GET  /api/products
-// POST /api/orders
 app.MapControllers();
+
+// ------------------------------------------------------------
+// Database Seed
+// ------------------------------------------------------------
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider
+        .GetRequiredService<AppDbContext>();
+
+    await DbSeeder.SeedAsync(context);
+}
 
 app.Run();
