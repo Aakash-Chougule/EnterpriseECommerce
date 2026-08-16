@@ -74,4 +74,35 @@ public class Product
         IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
+    public void UpdateDetails(
+    string name,
+    string description)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException(
+                "Product name is required.");
+
+        Name = name.Trim();
+        Description = description?.Trim() ?? string.Empty;
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ReduceStock(int quantity)
+    {
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "Quantity must be greater than zero.");
+        }
+
+        if (quantity > StockQuantity)
+        {
+            throw new InvalidOperationException(
+                "Insufficient stock.");
+        }
+
+        StockQuantity -= quantity;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

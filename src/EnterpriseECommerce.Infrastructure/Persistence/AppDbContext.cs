@@ -40,6 +40,9 @@ public class AppDbContext : DbContext
     // Represents the OrderItems table in PostgreSQL.
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
+    public DbSet<Cart> Carts => Set<Cart>();
+
+    public DbSet<CartItem> CartItems => Set<CartItem>();
     /// <summary>
     /// Applies entity configurations when the DbContext is created.
     /// </summary>
