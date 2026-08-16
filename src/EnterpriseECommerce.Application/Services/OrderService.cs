@@ -15,6 +15,7 @@ public class OrderService
     private readonly IOrderRepository _orderRepository;
     private readonly ICartRepository _cartRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IKafkaProducer _kafkaProducer;
     private readonly IConfiguration _configuration;
@@ -23,6 +24,7 @@ public class OrderService
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         IProductRepository productRepository,
+        IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IKafkaProducer kafkaProducer,
         IConfiguration configuration)
@@ -30,6 +32,7 @@ public class OrderService
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _productRepository = productRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _kafkaProducer = kafkaProducer;
         _configuration = configuration;
@@ -74,13 +77,32 @@ public class OrderService
         }
 
         // --------------------------------------------------------
-        // Read Kafka configuration BEFORE changing the database.
+        // Kafka configuration
         // --------------------------------------------------------
 
         var topic =
             _configuration["Kafka:OrderEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderEventsTopic is not configured.");
+
+        // --------------------------------------------------------
+        // Load customer information for notification event
+        // --------------------------------------------------------
+
+        var user = await _userRepository
+            .GetByIdAsync(userId);
+
+        if (user is null)
+        {
+            throw new KeyNotFoundException(
+                "User not found.");
+        }
+
+        if (!user.IsActive)
+        {
+            throw new InvalidOperationException(
+                "Inactive users cannot create orders.");
+        }
 
         Order? order = null;
 
@@ -154,10 +176,7 @@ public class OrderService
                 }
 
                 // ------------------------------------------------
-                // Snapshot the current product price.
-                //
-                // If the admin changes the product price later,
-                // this OrderItem keeps the purchase-time price.
+                // Snapshot current product price
                 // ------------------------------------------------
 
                 var orderItem = new OrderItem(
@@ -169,7 +188,7 @@ public class OrderService
                 order.AddItem(orderItem);
 
                 // ------------------------------------------------
-                // Reduce product inventory
+                // Reduce inventory
                 // ------------------------------------------------
 
                 product.ReduceStock(
@@ -180,14 +199,14 @@ public class OrderService
             }
 
             // ----------------------------------------------------
-            // Save order + order items
+            // Save order
             // ----------------------------------------------------
 
             await _orderRepository
                 .AddAsync(order);
 
             // ----------------------------------------------------
-            // Clear user's cart
+            // Clear cart
             // ----------------------------------------------------
 
             cart.Clear();
@@ -205,14 +224,7 @@ public class OrderService
         catch
         {
             // ----------------------------------------------------
-            // Rollback database operations if anything BEFORE
-            // commit fails.
-            //
-            // This rolls back:
-            // - Product stock changes
-            // - Order
-            // - OrderItems
-            // - Cart clearing
+            // Rollback checkout operations
             // ----------------------------------------------------
 
             await _unitOfWork
@@ -222,11 +234,7 @@ public class OrderService
         }
 
         // --------------------------------------------------------
-        // Transaction has successfully committed.
-        //
-        // Kafka publishing happens AFTER database commit.
-        // Therefore a Kafka failure cannot roll back an order
-        // that has already been permanently saved.
+        // Order must exist after successful transaction
         // --------------------------------------------------------
 
         if (order is null)
@@ -234,6 +242,10 @@ public class OrderService
             throw new InvalidOperationException(
                 "Order creation failed.");
         }
+
+        // --------------------------------------------------------
+        // Create Kafka OrderCreatedEvent
+        // --------------------------------------------------------
 
         var orderCreatedEvent =
             new OrderCreatedEvent
@@ -247,12 +259,22 @@ public class OrderService
                 UserId =
                     order.UserId,
 
+                CustomerEmail =
+                    user.Email,
+
+                CustomerName =
+                    $"{user.FirstName} {user.LastName}".Trim(),
+
                 TotalAmount =
                     order.TotalAmount,
 
                 CreatedAt =
                     order.CreatedAt
             };
+
+        // --------------------------------------------------------
+        // Publish AFTER database transaction commits
+        // --------------------------------------------------------
 
         await _kafkaProducer.PublishAsync(
             topic,
@@ -437,13 +459,13 @@ public class OrderService
             }
 
             // ----------------------------------------------------
-            // Validate and cancel through the domain entity.
+            // Domain cancellation rules
             // ----------------------------------------------------
 
             order.Cancel();
 
             // ----------------------------------------------------
-            // Restore inventory for every cancelled order item.
+            // Restore product stock
             // ----------------------------------------------------
 
             foreach (var orderItem in
@@ -470,14 +492,14 @@ public class OrderService
             }
 
             // ----------------------------------------------------
-            // Save cancelled order status
+            // Save cancelled order
             // ----------------------------------------------------
 
             await _orderRepository
                 .UpdateAsync(order);
 
             // ----------------------------------------------------
-            // Commit cancellation + inventory restoration
+            // Commit cancellation + stock restoration
             // ----------------------------------------------------
 
             await _unitOfWork
