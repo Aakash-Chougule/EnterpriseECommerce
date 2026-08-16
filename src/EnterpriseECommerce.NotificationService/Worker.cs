@@ -78,7 +78,7 @@ public class Worker : BackgroundService
                         "Kafka consume error: {Reason}",
                         ex.Error.Reason);
                 }
-
+                //
                 await Task.Yield();
             }
         }
