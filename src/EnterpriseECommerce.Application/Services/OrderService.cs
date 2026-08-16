@@ -1,6 +1,9 @@
 using EnterpriseECommerce.Application.DTOs;
+using EnterpriseECommerce.Application.Events;
 using EnterpriseECommerce.Application.Interfaces;
 using EnterpriseECommerce.Domain.Entities;
+
+using Microsoft.Extensions.Configuration;
 
 namespace EnterpriseECommerce.Application.Services;
 
@@ -13,17 +16,23 @@ public class OrderService
     private readonly ICartRepository _cartRepository;
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IKafkaProducer _kafkaProducer;
+    private readonly IConfiguration _configuration;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
         IProductRepository productRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IKafkaProducer kafkaProducer,
+        IConfiguration configuration)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
+        _kafkaProducer = kafkaProducer;
+        _configuration = configuration;
     }
 
     // ============================================================
@@ -33,13 +42,18 @@ public class OrderService
     /// <summary>
     /// Converts the authenticated user's cart into an order.
     ///
-    /// Checkout is executed inside one database transaction.
-    /// If any operation fails, all changes are rolled back.
+    /// Database changes are executed inside one transaction.
+    /// After the transaction commits successfully, an
+    /// OrderCreatedEvent is published to Kafka.
     /// </summary>
     public async Task<OrderDto> CreateOrderAsync(
         Guid userId,
         CreateOrderRequest request)
     {
+        // --------------------------------------------------------
+        // Validation
+        // --------------------------------------------------------
+
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
@@ -58,6 +72,17 @@ public class OrderService
             throw new ArgumentException(
                 "Shipping address is required.");
         }
+
+        // --------------------------------------------------------
+        // Read Kafka configuration BEFORE changing the database.
+        // --------------------------------------------------------
+
+        var topic =
+            _configuration["Kafka:OrderEventsTopic"]
+            ?? throw new InvalidOperationException(
+                "Kafka OrderEventsTopic is not configured.");
+
+        Order? order = null;
 
         // --------------------------------------------------------
         // Start database transaction
@@ -85,7 +110,7 @@ public class OrderService
             // Create order
             // ----------------------------------------------------
 
-            var order = new Order(
+            order = new Order(
                 userId,
                 request.ShippingAddress.Trim());
 
@@ -95,8 +120,14 @@ public class OrderService
 
             foreach (var cartItem in cart.Items)
             {
-                var product = await _productRepository
-                    .GetByIdAsync(cartItem.ProductId);
+                var product =
+                    await _productRepository
+                        .GetByIdAsync(
+                            cartItem.ProductId);
+
+                // ------------------------------------------------
+                // Product must exist and be active
+                // ------------------------------------------------
 
                 if (product is null ||
                     !product.IsActive)
@@ -107,7 +138,7 @@ public class OrderService
                 }
 
                 // ------------------------------------------------
-                // Validate stock
+                // Validate available stock
                 // ------------------------------------------------
 
                 if (cartItem.Quantity >
@@ -123,7 +154,10 @@ public class OrderService
                 }
 
                 // ------------------------------------------------
-                // Snapshot current product price
+                // Snapshot the current product price.
+                //
+                // If the admin changes the product price later,
+                // this OrderItem keeps the purchase-time price.
                 // ------------------------------------------------
 
                 var orderItem = new OrderItem(
@@ -135,7 +169,7 @@ public class OrderService
                 order.AddItem(orderItem);
 
                 // ------------------------------------------------
-                // Reduce inventory
+                // Reduce product inventory
                 // ------------------------------------------------
 
                 product.ReduceStock(
@@ -146,14 +180,14 @@ public class OrderService
             }
 
             // ----------------------------------------------------
-            // Save order
+            // Save order + order items
             // ----------------------------------------------------
 
             await _orderRepository
                 .AddAsync(order);
 
             // ----------------------------------------------------
-            // Clear cart
+            // Clear user's cart
             // ----------------------------------------------------
 
             cart.Clear();
@@ -162,21 +196,20 @@ public class OrderService
                 .UpdateAsync(cart);
 
             // ----------------------------------------------------
-            // Commit everything together
+            // Commit database transaction
             // ----------------------------------------------------
 
             await _unitOfWork
                 .CommitTransactionAsync();
-
-            return MapToDto(order);
         }
         catch
         {
             // ----------------------------------------------------
-            // Something failed.
+            // Rollback database operations if anything BEFORE
+            // commit fails.
             //
-            // Roll back:
-            // - Stock changes
+            // This rolls back:
+            // - Product stock changes
             // - Order
             // - OrderItems
             // - Cart clearing
@@ -187,6 +220,45 @@ public class OrderService
 
             throw;
         }
+
+        // --------------------------------------------------------
+        // Transaction has successfully committed.
+        //
+        // Kafka publishing happens AFTER database commit.
+        // Therefore a Kafka failure cannot roll back an order
+        // that has already been permanently saved.
+        // --------------------------------------------------------
+
+        if (order is null)
+        {
+            throw new InvalidOperationException(
+                "Order creation failed.");
+        }
+
+        var orderCreatedEvent =
+            new OrderCreatedEvent
+            {
+                OrderId =
+                    order.Id,
+
+                OrderNumber =
+                    order.OrderNumber,
+
+                UserId =
+                    order.UserId,
+
+                TotalAmount =
+                    order.TotalAmount,
+
+                CreatedAt =
+                    order.CreatedAt
+            };
+
+        await _kafkaProducer.PublishAsync(
+            topic,
+            orderCreatedEvent);
+
+        return MapToDto(order);
     }
 
     // ============================================================
@@ -202,8 +274,9 @@ public class OrderService
                 "UserId is required.");
         }
 
-        var orders = await _orderRepository
-            .GetByUserIdAsync(userId);
+        var orders =
+            await _orderRepository
+                .GetByUserIdAsync(userId);
 
         return orders
             .Select(MapToDto)
@@ -230,8 +303,9 @@ public class OrderService
                 "OrderId is required.");
         }
 
-        var order = await _orderRepository
-            .GetByIdAsync(orderId);
+        var order =
+            await _orderRepository
+                .GetByIdAsync(orderId);
 
         if (order is null ||
             order.UserId != userId)
@@ -242,15 +316,16 @@ public class OrderService
         return MapToDto(order);
     }
 
-
-    //
     // ============================================================
     // ADMIN - GET ALL ORDERS
     // ============================================================
 
-    public async Task<IReadOnlyList<OrderDto>> GetAllOrdersAsync()
+    public async Task<IReadOnlyList<OrderDto>>
+        GetAllOrdersAsync()
     {
-        var orders = await _orderRepository.GetAllAsync();
+        var orders =
+            await _orderRepository
+                .GetAllAsync();
 
         return orders
             .Select(MapToDto)
@@ -261,13 +336,17 @@ public class OrderService
     // ADMIN - CONFIRM ORDER
     // ============================================================
 
-    public async Task<OrderDto> ConfirmOrderAsync(Guid orderId)
+    public async Task<OrderDto> ConfirmOrderAsync(
+        Guid orderId)
     {
-        var order = await GetRequiredOrderAsync(orderId);
+        var order =
+            await GetRequiredOrderAsync(
+                orderId);
 
         order.Confirm();
 
-        await _orderRepository.UpdateAsync(order);
+        await _orderRepository
+            .UpdateAsync(order);
 
         return MapToDto(order);
     }
@@ -276,13 +355,17 @@ public class OrderService
     // ADMIN - START PROCESSING
     // ============================================================
 
-    public async Task<OrderDto> StartProcessingAsync(Guid orderId)
+    public async Task<OrderDto> StartProcessingAsync(
+        Guid orderId)
     {
-        var order = await GetRequiredOrderAsync(orderId);
+        var order =
+            await GetRequiredOrderAsync(
+                orderId);
 
         order.StartProcessing();
 
-        await _orderRepository.UpdateAsync(order);
+        await _orderRepository
+            .UpdateAsync(order);
 
         return MapToDto(order);
     }
@@ -291,13 +374,17 @@ public class OrderService
     // ADMIN - SHIP ORDER
     // ============================================================
 
-    public async Task<OrderDto> ShipOrderAsync(Guid orderId)
+    public async Task<OrderDto> ShipOrderAsync(
+        Guid orderId)
     {
-        var order = await GetRequiredOrderAsync(orderId);
+        var order =
+            await GetRequiredOrderAsync(
+                orderId);
 
         order.Ship();
 
-        await _orderRepository.UpdateAsync(order);
+        await _orderRepository
+            .UpdateAsync(order);
 
         return MapToDto(order);
     }
@@ -306,13 +393,17 @@ public class OrderService
     // ADMIN - DELIVER ORDER
     // ============================================================
 
-    public async Task<OrderDto> DeliverOrderAsync(Guid orderId)
+    public async Task<OrderDto> DeliverOrderAsync(
+        Guid orderId)
     {
-        var order = await GetRequiredOrderAsync(orderId);
+        var order =
+            await GetRequiredOrderAsync(
+                orderId);
 
         order.Deliver();
 
-        await _orderRepository.UpdateAsync(order);
+        await _orderRepository
+            .UpdateAsync(order);
 
         return MapToDto(order);
     }
@@ -321,7 +412,8 @@ public class OrderService
     // ADMIN - CANCEL ORDER
     // ============================================================
 
-    public async Task<OrderDto> CancelOrderAsync(Guid orderId)
+    public async Task<OrderDto> CancelOrderAsync(
+        Guid orderId)
     {
         if (orderId == Guid.Empty)
         {
@@ -329,12 +421,14 @@ public class OrderService
                 "OrderId is required.");
         }
 
-        await _unitOfWork.BeginTransactionAsync();
+        await _unitOfWork
+            .BeginTransactionAsync();
 
         try
         {
-            var order = await _orderRepository
-                .GetByIdAsync(orderId);
+            var order =
+                await _orderRepository
+                    .GetByIdAsync(orderId);
 
             if (order is null)
             {
@@ -342,19 +436,30 @@ public class OrderService
                     "Order not found.");
             }
 
-            // Domain rules decide whether cancellation is allowed.
+            // ----------------------------------------------------
+            // Validate and cancel through the domain entity.
+            // ----------------------------------------------------
+
             order.Cancel();
 
-            // Restore stock for every item in the order.
-            foreach (var orderItem in order.OrderItems)
+            // ----------------------------------------------------
+            // Restore inventory for every cancelled order item.
+            // ----------------------------------------------------
+
+            foreach (var orderItem in
+                     order.OrderItems)
             {
-                var product = await _productRepository
-                    .GetByIdAsync(orderItem.ProductId);
+                var product =
+                    await _productRepository
+                        .GetByIdAsync(
+                            orderItem.ProductId);
 
                 if (product is null)
                 {
                     throw new InvalidOperationException(
-                        $"Product '{orderItem.ProductId}' was not found.");
+                        $"Product " +
+                        $"'{orderItem.ProductId}' " +
+                        "was not found.");
                 }
 
                 product.IncreaseStock(
@@ -364,8 +469,16 @@ public class OrderService
                     .UpdateAsync(product);
             }
 
+            // ----------------------------------------------------
+            // Save cancelled order status
+            // ----------------------------------------------------
+
             await _orderRepository
                 .UpdateAsync(order);
+
+            // ----------------------------------------------------
+            // Commit cancellation + inventory restoration
+            // ----------------------------------------------------
 
             await _unitOfWork
                 .CommitTransactionAsync();
@@ -385,7 +498,9 @@ public class OrderService
     // INTERNAL ORDER LOOKUP
     // ============================================================
 
-    private async Task<Order> GetRequiredOrderAsync(Guid orderId)
+    private async Task<Order>
+        GetRequiredOrderAsync(
+            Guid orderId)
     {
         if (orderId == Guid.Empty)
         {
@@ -393,8 +508,9 @@ public class OrderService
                 "OrderId is required.");
         }
 
-        var order = await _orderRepository
-            .GetByIdAsync(orderId);
+        var order =
+            await _orderRepository
+                .GetByIdAsync(orderId);
 
         if (order is null)
         {
@@ -414,7 +530,8 @@ public class OrderService
     {
         return new OrderDto
         {
-            Id = order.Id,
+            Id =
+                order.Id,
 
             OrderNumber =
                 order.OrderNumber,

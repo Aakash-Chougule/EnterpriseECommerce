@@ -7,6 +7,7 @@ using EnterpriseECommerce.Infrastructure.Persistence;
 using EnterpriseECommerce.Infrastructure.Persistence.Seed;
 using EnterpriseECommerce.Infrastructure.Repositories;
 using EnterpriseECommerce.Infrastructure.Security;
+using EnterpriseECommerce.Infrastructure.Messaging;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,8 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
+builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
 
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
