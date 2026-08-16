@@ -35,6 +35,10 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+builder.Services.AddScoped<PaymentService>();
+
 
 
 // ------------------------------------------------------------
@@ -170,6 +174,8 @@ builder.Services.AddScoped<
 builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+
 // Product Service
 
 builder.Services.AddScoped<ProductService>();

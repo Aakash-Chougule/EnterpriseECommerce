@@ -1,16 +1,11 @@
 using EnterpriseECommerce.Application.Interfaces;
-
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace EnterpriseECommerce.Infrastructure.Persistence;
 
-/// <summary>
-/// EF Core implementation of the application Unit of Work.
-/// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly AppDbContext _context;
-
     private IDbContextTransaction? _transaction;
 
     public UnitOfWork(AppDbContext context)
@@ -39,7 +34,6 @@ public class UnitOfWork : IUnitOfWork
         }
 
         await _transaction.CommitAsync();
-
         await _transaction.DisposeAsync();
 
         _transaction = null;
@@ -53,7 +47,6 @@ public class UnitOfWork : IUnitOfWork
         }
 
         await _transaction.RollbackAsync();
-
         await _transaction.DisposeAsync();
 
         _transaction = null;

@@ -30,6 +30,18 @@ public class OrderRepository : IOrderRepository
             .ToListAsync();
     }
 
+    // ============================================================
+    // ADMIN - GET ALL ORDERS
+    // ============================================================
+
+    public async Task<IEnumerable<Order>> GetAllAsync()
+    {
+        return await _context.Orders
+            .Include(order => order.OrderItems)
+            .OrderByDescending(order => order.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Order order)
     {
         await _context.Orders.AddAsync(order);
@@ -39,6 +51,8 @@ public class OrderRepository : IOrderRepository
 
     public async Task UpdateAsync(Order order)
     {
+        // Order was loaded through this DbContext and is already
+        // tracked, therefore SaveChangesAsync is sufficient.
         await _context.SaveChangesAsync();
     }
 }

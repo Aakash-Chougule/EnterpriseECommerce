@@ -56,6 +56,16 @@ public class UserRepository : IUserRepository
     }
 
     /// <summary>
+    /// Updates an existing user.
+    /// </summary>
+    public async Task UpdateAsync(User user)
+    {
+        _context.Users.Update(user);
+
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
     /// Determines whether the supplied email address is already
     /// registered in the system.
     /// </summary>

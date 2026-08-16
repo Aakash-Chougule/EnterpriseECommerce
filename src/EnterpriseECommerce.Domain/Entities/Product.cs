@@ -105,4 +105,15 @@ public class Product
         StockQuantity -= quantity;
         UpdatedAt = DateTime.UtcNow;
     }
+    public void IncreaseStock(int quantity)
+    {
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "Quantity must be greater than zero.");
+        }
+
+        StockQuantity += quantity;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

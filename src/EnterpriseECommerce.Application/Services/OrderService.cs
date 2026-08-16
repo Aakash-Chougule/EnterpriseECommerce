@@ -12,15 +12,18 @@ public class OrderService
     private readonly IOrderRepository _orderRepository;
     private readonly ICartRepository _cartRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public OrderService(
         IOrderRepository orderRepository,
         ICartRepository cartRepository,
-        IProductRepository productRepository)
+        IProductRepository productRepository,
+        IUnitOfWork unitOfWork)
     {
         _orderRepository = orderRepository;
         _cartRepository = cartRepository;
         _productRepository = productRepository;
+        _unitOfWork = unitOfWork;
     }
 
     // ============================================================
@@ -30,30 +33,18 @@ public class OrderService
     /// <summary>
     /// Converts the authenticated user's cart into an order.
     ///
-    /// During checkout:
-    /// - Products are validated.
-    /// - Current product prices are copied into OrderItems.
-    /// - Product stock is reduced.
-    /// - The order is saved.
-    /// - The cart is cleared.
+    /// Checkout is executed inside one database transaction.
+    /// If any operation fails, all changes are rolled back.
     /// </summary>
     public async Task<OrderDto> CreateOrderAsync(
         Guid userId,
         CreateOrderRequest request)
     {
-        // --------------------------------------------------------
-        // Validate UserId
-        // --------------------------------------------------------
-
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
                 "UserId is required.");
         }
-
-        // --------------------------------------------------------
-        // Validate request
-        // --------------------------------------------------------
 
         if (request is null)
         {
@@ -69,138 +60,139 @@ public class OrderService
         }
 
         // --------------------------------------------------------
-        // Load user's cart
+        // Start database transaction
         // --------------------------------------------------------
 
-        var cart = await _cartRepository
-            .GetByUserIdAsync(userId);
+        await _unitOfWork.BeginTransactionAsync();
 
-        if (cart is null ||
-            cart.Items.Count == 0)
-        {
-            throw new InvalidOperationException(
-                "Cart is empty.");
-        }
-
-        // --------------------------------------------------------
-        // Create Order
-        // --------------------------------------------------------
-
-        var order = new Order(
-            userId,
-            request.ShippingAddress.Trim());
-
-        // --------------------------------------------------------
-        // Convert CartItems → OrderItems
-        // --------------------------------------------------------
-
-        foreach (var cartItem in cart.Items)
+        try
         {
             // ----------------------------------------------------
-            // Load product
+            // Load user's cart
             // ----------------------------------------------------
 
-            var product = await _productRepository
-                .GetByIdAsync(cartItem.ProductId);
+            var cart = await _cartRepository
+                .GetByUserIdAsync(userId);
 
-            // ----------------------------------------------------
-            // Product must exist and be active
-            // ----------------------------------------------------
-
-            if (product is null ||
-                !product.IsActive)
+            if (cart is null ||
+                cart.Items.Count == 0)
             {
                 throw new InvalidOperationException(
-                    $"Product '{cartItem.ProductId}' " +
-                    "is no longer available.");
+                    "Cart is empty.");
             }
 
             // ----------------------------------------------------
-            // Validate stock
+            // Create order
             // ----------------------------------------------------
 
-            if (cartItem.Quantity >
-                product.StockQuantity)
+            var order = new Order(
+                userId,
+                request.ShippingAddress.Trim());
+
+            // ----------------------------------------------------
+            // Convert CartItems → OrderItems
+            // ----------------------------------------------------
+
+            foreach (var cartItem in cart.Items)
             {
-                throw new InvalidOperationException(
-                    $"Insufficient stock for product " +
-                    $"'{product.Name}'. " +
-                    $"Available stock: " +
-                    $"{product.StockQuantity}. " +
-                    $"Requested quantity: " +
-                    $"{cartItem.Quantity}.");
+                var product = await _productRepository
+                    .GetByIdAsync(cartItem.ProductId);
+
+                if (product is null ||
+                    !product.IsActive)
+                {
+                    throw new InvalidOperationException(
+                        $"Product '{cartItem.ProductId}' " +
+                        "is no longer available.");
+                }
+
+                // ------------------------------------------------
+                // Validate stock
+                // ------------------------------------------------
+
+                if (cartItem.Quantity >
+                    product.StockQuantity)
+                {
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for product " +
+                        $"'{product.Name}'. " +
+                        $"Available stock: " +
+                        $"{product.StockQuantity}. " +
+                        $"Requested quantity: " +
+                        $"{cartItem.Quantity}.");
+                }
+
+                // ------------------------------------------------
+                // Snapshot current product price
+                // ------------------------------------------------
+
+                var orderItem = new OrderItem(
+                    product.Id,
+                    product.Name,
+                    cartItem.Quantity,
+                    product.Price);
+
+                order.AddItem(orderItem);
+
+                // ------------------------------------------------
+                // Reduce inventory
+                // ------------------------------------------------
+
+                product.ReduceStock(
+                    cartItem.Quantity);
+
+                await _productRepository
+                    .UpdateAsync(product);
             }
 
             // ----------------------------------------------------
-            // Create OrderItem
-            //
-            // IMPORTANT:
-            // Product.Price is copied into UnitPrice.
-            //
-            // This preserves the purchase price even if the
-            // admin changes Product.Price later.
+            // Save order
             // ----------------------------------------------------
 
-            var orderItem = new OrderItem(
-                product.Id,
-                product.Name,
-                cartItem.Quantity,
-                product.Price);
+            await _orderRepository
+                .AddAsync(order);
 
             // ----------------------------------------------------
-            // Add item to Order
-            //
-            // Order.AddItem() automatically recalculates
-            // TotalAmount.
+            // Clear cart
             // ----------------------------------------------------
 
-            order.AddItem(orderItem);
+            cart.Clear();
+
+            await _cartRepository
+                .UpdateAsync(cart);
 
             // ----------------------------------------------------
-            // Reduce product stock
+            // Commit everything together
             // ----------------------------------------------------
 
-            product.ReduceStock(
-                cartItem.Quantity);
+            await _unitOfWork
+                .CommitTransactionAsync();
 
-            // ----------------------------------------------------
-            // Persist stock change
-            // ----------------------------------------------------
-
-            await _productRepository
-                .UpdateAsync(product);
+            return MapToDto(order);
         }
+        catch
+        {
+            // ----------------------------------------------------
+            // Something failed.
+            //
+            // Roll back:
+            // - Stock changes
+            // - Order
+            // - OrderItems
+            // - Cart clearing
+            // ----------------------------------------------------
 
-        // --------------------------------------------------------
-        // Save Order
-        // --------------------------------------------------------
+            await _unitOfWork
+                .RollbackTransactionAsync();
 
-        await _orderRepository
-            .AddAsync(order);
-
-        // --------------------------------------------------------
-        // Clear cart only after order has been created.
-        // --------------------------------------------------------
-
-        cart.Clear();
-
-        await _cartRepository
-            .UpdateAsync(cart);
-
-        // --------------------------------------------------------
-        // Return API DTO
-        // --------------------------------------------------------
-
-        return MapToDto(order);
+            throw;
+        }
     }
 
     // ============================================================
     // GET USER ORDERS
     // ============================================================
 
-    /// <summary>
-    /// Returns all orders belonging to a user.
-    /// </summary>
     public async Task<IReadOnlyList<OrderDto>>
         GetUserOrdersAsync(Guid userId)
     {
@@ -222,11 +214,6 @@ public class OrderService
     // GET ORDER BY ID
     // ============================================================
 
-    /// <summary>
-    /// Returns a specific order belonging to the user.
-    ///
-    /// A user cannot retrieve another user's order.
-    /// </summary>
     public async Task<OrderDto?> GetOrderByIdAsync(
         Guid userId,
         Guid orderId)
@@ -253,6 +240,169 @@ public class OrderService
         }
 
         return MapToDto(order);
+    }
+
+
+    //
+    // ============================================================
+    // ADMIN - GET ALL ORDERS
+    // ============================================================
+
+    public async Task<IReadOnlyList<OrderDto>> GetAllOrdersAsync()
+    {
+        var orders = await _orderRepository.GetAllAsync();
+
+        return orders
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    // ============================================================
+    // ADMIN - CONFIRM ORDER
+    // ============================================================
+
+    public async Task<OrderDto> ConfirmOrderAsync(Guid orderId)
+    {
+        var order = await GetRequiredOrderAsync(orderId);
+
+        order.Confirm();
+
+        await _orderRepository.UpdateAsync(order);
+
+        return MapToDto(order);
+    }
+
+    // ============================================================
+    // ADMIN - START PROCESSING
+    // ============================================================
+
+    public async Task<OrderDto> StartProcessingAsync(Guid orderId)
+    {
+        var order = await GetRequiredOrderAsync(orderId);
+
+        order.StartProcessing();
+
+        await _orderRepository.UpdateAsync(order);
+
+        return MapToDto(order);
+    }
+
+    // ============================================================
+    // ADMIN - SHIP ORDER
+    // ============================================================
+
+    public async Task<OrderDto> ShipOrderAsync(Guid orderId)
+    {
+        var order = await GetRequiredOrderAsync(orderId);
+
+        order.Ship();
+
+        await _orderRepository.UpdateAsync(order);
+
+        return MapToDto(order);
+    }
+
+    // ============================================================
+    // ADMIN - DELIVER ORDER
+    // ============================================================
+
+    public async Task<OrderDto> DeliverOrderAsync(Guid orderId)
+    {
+        var order = await GetRequiredOrderAsync(orderId);
+
+        order.Deliver();
+
+        await _orderRepository.UpdateAsync(order);
+
+        return MapToDto(order);
+    }
+
+    // ============================================================
+    // ADMIN - CANCEL ORDER
+    // ============================================================
+
+    public async Task<OrderDto> CancelOrderAsync(Guid orderId)
+    {
+        if (orderId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "OrderId is required.");
+        }
+
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            var order = await _orderRepository
+                .GetByIdAsync(orderId);
+
+            if (order is null)
+            {
+                throw new KeyNotFoundException(
+                    "Order not found.");
+            }
+
+            // Domain rules decide whether cancellation is allowed.
+            order.Cancel();
+
+            // Restore stock for every item in the order.
+            foreach (var orderItem in order.OrderItems)
+            {
+                var product = await _productRepository
+                    .GetByIdAsync(orderItem.ProductId);
+
+                if (product is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Product '{orderItem.ProductId}' was not found.");
+                }
+
+                product.IncreaseStock(
+                    orderItem.Quantity);
+
+                await _productRepository
+                    .UpdateAsync(product);
+            }
+
+            await _orderRepository
+                .UpdateAsync(order);
+
+            await _unitOfWork
+                .CommitTransactionAsync();
+
+            return MapToDto(order);
+        }
+        catch
+        {
+            await _unitOfWork
+                .RollbackTransactionAsync();
+
+            throw;
+        }
+    }
+
+    // ============================================================
+    // INTERNAL ORDER LOOKUP
+    // ============================================================
+
+    private async Task<Order> GetRequiredOrderAsync(Guid orderId)
+    {
+        if (orderId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "OrderId is required.");
+        }
+
+        var order = await _orderRepository
+            .GetByIdAsync(orderId);
+
+        if (order is null)
+        {
+            throw new KeyNotFoundException(
+                "Order not found.");
+        }
+
+        return order;
     }
 
     // ============================================================

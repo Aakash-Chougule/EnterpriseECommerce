@@ -8,6 +8,9 @@ public interface IOrderRepository
 
     Task<IEnumerable<Order>> GetByUserIdAsync(Guid userId);
 
+    // Admin: retrieve all orders.
+    Task<IEnumerable<Order>> GetAllAsync();
+
     Task AddAsync(Order order);
 
     Task UpdateAsync(Order order);
