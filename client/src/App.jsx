@@ -8,42 +8,117 @@ import {
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProductsPage from './pages/ProductsPage'
+import CartPage from './pages/CartPage'
+
+import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/AuthContext'
 
 function App() {
+
+    // Authentication information is available globally
+    // because App is wrapped inside AuthProvider.
+    const {
+        user,
+        isAuthenticated,
+        logout
+    } = useAuth()
+
     return (
         <BrowserRouter>
 
-            {/* 
-        Temporary navigation.
-        Later we will move this into a reusable Navbar component.
-      */}
+            {/* ======================================================
+          TEMPORARY NAVIGATION
+
+          Later we will replace this with a professional Navbar
+          component and proper styling.
+         ====================================================== */}
+
             <nav>
-                <Link to="/">Home</Link>
+
+                <Link to="/">
+                    Home
+                </Link>
+
                 {' | '}
-                <Link to="/login">Login</Link>
+
+                <Link to="/products">
+                    Products
+                </Link>
+
+             
+
                 {' | '}
-                <Link to="/products">Products</Link>
+
+                <Link to="/cart">
+                    Cart
+                </Link>
+
+                {/* -----------------------------------------------
+            Show different navigation depending on whether
+            the user is logged in.
+           ----------------------------------------------- */}
+
+                {isAuthenticated ? (
+                    <>
+                        <span>
+                            Welcome {user?.firstName}
+                        </span>
+
+                        {' | '}
+
+                        <button
+                            type="button"
+                            onClick={logout}
+                        >
+                            Logout
+                        </button>
+                    </>
+                ) : (
+                    <Link to="/login">
+                        Login
+                    </Link>
+                )}
+
             </nav>
 
-            {/* 
-        Routes decides which React component should appear
-        depending on the current browser URL.
-      */}
+            {/* ======================================================
+          APPLICATION ROUTES
+         ====================================================== */}
+
             <Routes>
+
+                {/* Public route */}
 
                 <Route
                     path="/"
                     element={<HomePage />}
                 />
 
+                {/* Public route */}
+
                 <Route
                     path="/login"
                     element={<LoginPage />}
                 />
 
+                {/* Protected route */}
+
                 <Route
                     path="/products"
-                    element={<ProductsPage />}
+                    element={
+                        <ProtectedRoute>
+                            <ProductsPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/cart"
+                    element={
+                        <ProtectedRoute>
+                            <CartPage />
+                        </ProtectedRoute>
+                    }
                 />
 
             </Routes>
