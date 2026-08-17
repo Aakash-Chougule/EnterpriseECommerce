@@ -3,11 +3,11 @@ using System.Text;
 using EnterpriseECommerce.Application.Interfaces;
 using EnterpriseECommerce.Application.Services;
 
+using EnterpriseECommerce.Infrastructure.Messaging;
 using EnterpriseECommerce.Infrastructure.Persistence;
 using EnterpriseECommerce.Infrastructure.Persistence.Seed;
 using EnterpriseECommerce.Infrastructure.Repositories;
 using EnterpriseECommerce.Infrastructure.Security;
-using EnterpriseECommerce.Infrastructure.Messaging;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -27,30 +27,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // ------------------------------------------------------------
-// Cart Repository
-// ------------------------------------------------------------
-
-builder.Services.AddScoped<ICartRepository, CartRepository>();
-
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-
-builder.Services.AddSingleton<IKafkaProducer, KafkaProducer>();
-
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-
-builder.Services.AddScoped<PaymentService>();
-
-
-
-// ------------------------------------------------------------
-// Application Services
-// ------------------------------------------------------------
-
-builder.Services.AddScoped<CartService>();
-
-// ------------------------------------------------------------
 // Swagger / OpenAPI
 // ------------------------------------------------------------
 
@@ -58,18 +34,28 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
 
-        Description =
-            "Enter your JWT access token.\n\n" +
-            "Example: Bearer eyJhbGciOiJIUzI1NiIs..."
-    });
+            Type =
+                SecuritySchemeType.Http,
+
+            Scheme =
+                "bearer",
+
+            BearerFormat =
+                "JWT",
+
+            In =
+                ParameterLocation.Header,
+
+            Description =
+                "Enter your JWT access token.\n\n" +
+                "Example: Bearer eyJhbGciOiJIUzI1NiIs..."
+        });
 
     options.AddSecurityRequirement(document =>
         new OpenApiSecurityRequirement
@@ -90,55 +76,58 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options
         .UseNpgsql(
-            builder.Configuration.GetConnectionString(
-                "DefaultConnection"))
+            builder.Configuration
+                .GetConnectionString(
+                    "DefaultConnection"))
 
-        // IMPORTANT:
-        // CartRepository.GetByUserIdAsync() loads the Cart
-        // and CartItems and the CartService modifies them.
-        //
-        // Explicitly make sure EF Core uses tracking queries.
+        // --------------------------------------------------------
+        // Keep EF Core entities tracked.
+        // --------------------------------------------------------
         .UseQueryTrackingBehavior(
             QueryTrackingBehavior.TrackAll)
 
-        // Useful while diagnosing EF Core problems.
+        // --------------------------------------------------------
+        // Useful during development/debugging.
+        // --------------------------------------------------------
         .EnableDetailedErrors()
 
-        // Shows entity/key values in EF logs.
-        // Remove or disable this in production.
+        // WARNING:
+        // Disable this in production because values can appear
+        // inside logs.
         .EnableSensitiveDataLogging()
 
-        // Log EF Core SQL and change-tracking related activity.
         .LogTo(
             Console.WriteLine,
             LogLevel.Information);
 });
 
-
-
 // ============================================================
 // REPOSITORIES
 // ============================================================
 
-// Product Repository
+builder.Services.AddScoped<
+    ICartRepository,
+    CartRepository>();
+
+builder.Services.AddScoped<
+    IOrderRepository,
+    OrderRepository>();
 
 builder.Services.AddScoped<
     IProductRepository,
     ProductRepository>();
 
-// User Repository
+builder.Services.AddScoped<
+    IPaymentRepository,
+    PaymentRepository>();
 
 builder.Services.AddScoped<
     IUserRepository,
     UserRepository>();
 
-// Role Repository
-
 builder.Services.AddScoped<
     IRoleRepository,
     RoleRepository>();
-
-// Category Repository
 
 builder.Services.AddScoped<
     ICategoryRepository,
@@ -148,13 +137,9 @@ builder.Services.AddScoped<
 // SECURITY SERVICES
 // ============================================================
 
-// Password Hasher
-
 builder.Services.AddScoped<
     IPasswordHasher,
     BCryptPasswordHasher>();
-
-// JWT Token Service
 
 builder.Services.AddScoped<
     IJwtTokenService,
@@ -164,28 +149,58 @@ builder.Services.AddScoped<
 // APPLICATION SERVICES
 // ============================================================
 
-// Authentication Service
-
 builder.Services.AddScoped<
     IAuthService,
     AuthService>();
 
 builder.Services.AddScoped<
-    IOrderRepository,
-    OrderRepository>();
+    IUnitOfWork,
+    UnitOfWork>();
+
+builder.Services.AddScoped<CartService>();
 
 builder.Services.AddScoped<OrderService>();
 
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-
-// Product Service
-
 builder.Services.AddScoped<ProductService>();
 
-// Category Service
-
 builder.Services.AddScoped<CategoryService>();
+
+builder.Services.AddScoped<PaymentService>();
+
+// ============================================================
+// KAFKA
+// ============================================================
+
+builder.Services.AddSingleton<
+    IKafkaProducer,
+    KafkaProducer>();
+
+// ============================================================
+// CORS
+// ============================================================
+//
+// CORS allows our React development application to communicate
+// with this ASP.NET Core API.
+//
+// React is currently running with Vite on localhost:5174.
+//
+// Later, when the React application is deployed, we will replace
+// this URL with the production frontend URL.
+// ============================================================
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        "ReactDevelopment",
+        policy =>
+        {
+            policy
+                .WithOrigins(
+                    "http://localhost:5174")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
 
 // ============================================================
 // JWT AUTHENTICATION
@@ -194,10 +209,16 @@ builder.Services.AddScoped<CategoryService>();
 builder.Services
     .AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)
+
     .AddJwtBearer(options =>
     {
+        // --------------------------------------------------------
+        // Read JWT configuration
+        // --------------------------------------------------------
+
         var jwtSettings =
-            builder.Configuration.GetSection("Jwt");
+            builder.Configuration
+                .GetSection("Jwt");
 
         var secretKey =
             jwtSettings["SecretKey"]
@@ -214,45 +235,37 @@ builder.Services
             ?? throw new InvalidOperationException(
                 "JWT Audience is not configured.");
 
+        // --------------------------------------------------------
+        // Configure JWT validation
+        // --------------------------------------------------------
+
         options.TokenValidationParameters =
             new TokenValidationParameters
             {
-                // ------------------------------------------------
-                // Signature
-                // ------------------------------------------------
-
+                // Validate token signature.
                 ValidateIssuerSigningKey = true,
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(secretKey)),
+                        Encoding.UTF8.GetBytes(
+                            secretKey)),
 
-                // ------------------------------------------------
-                // Issuer
-                // ------------------------------------------------
-
+                // Validate token issuer.
                 ValidateIssuer = true,
 
-                ValidIssuer = issuer,
+                ValidIssuer =
+                    issuer,
 
-                // ------------------------------------------------
-                // Audience
-                // ------------------------------------------------
-
+                // Validate token audience.
                 ValidateAudience = true,
 
-                ValidAudience = audience,
+                ValidAudience =
+                    audience,
 
-                // ------------------------------------------------
-                // Lifetime
-                // ------------------------------------------------
-
+                // Reject expired tokens.
                 ValidateLifetime = true,
 
-                // ------------------------------------------------
-                // Clock Skew
-                // ------------------------------------------------
-
+                // Small tolerance for clock differences.
                 ClockSkew =
                     TimeSpan.FromMinutes(1)
             };
@@ -261,35 +274,39 @@ builder.Services
         // TEMPORARY JWT DIAGNOSTICS
         // ========================================================
 
-        options.Events = new JwtBearerEvents
-        {
-            OnAuthenticationFailed = context =>
+        options.Events =
+            new JwtBearerEvents
             {
-                Console.WriteLine();
-                Console.WriteLine(
-                    "==============================================");
+                OnAuthenticationFailed =
+                    context =>
+                    {
+                        Console.WriteLine();
 
-                Console.WriteLine(
-                    "JWT AUTHENTICATION FAILED");
+                        Console.WriteLine(
+                            "==============================================");
 
-                Console.WriteLine(
-                    "==============================================");
+                        Console.WriteLine(
+                            "JWT AUTHENTICATION FAILED");
 
-                Console.WriteLine(
-                    $"Exception: {context.Exception.Message}");
+                        Console.WriteLine(
+                            "==============================================");
 
-                Console.WriteLine(
-                    $"Exception Type: " +
-                    $"{context.Exception.GetType().Name}");
+                        Console.WriteLine(
+                            $"Exception: " +
+                            $"{context.Exception.Message}");
 
-                Console.WriteLine(
-                    "==============================================");
+                        Console.WriteLine(
+                            $"Exception Type: " +
+                            $"{context.Exception.GetType().Name}");
 
-                Console.WriteLine();
+                        Console.WriteLine(
+                            "==============================================");
 
-                return Task.CompletedTask;
-            }
-        };
+                        Console.WriteLine();
+
+                        return Task.CompletedTask;
+                    }
+            };
     });
 
 // ============================================================
@@ -301,12 +318,24 @@ builder.Services.AddAuthorization();
 // ============================================================
 // BUILD APPLICATION
 // ============================================================
+//
+// IMPORTANT:
+//
+// All builder.Services registrations must happen BEFORE this
+// line.
+//
+// After Build(), the service collection becomes read-only.
+// ============================================================
 
 var app = builder.Build();
 
 // ============================================================
 // HTTP REQUEST PIPELINE
 // ============================================================
+
+// ------------------------------------------------------------
+// Swagger
+// ------------------------------------------------------------
 
 if (app.Environment.IsDevelopment())
 {
@@ -318,8 +347,25 @@ if (app.Environment.IsDevelopment())
 // ------------------------------------------------------------
 // HTTPS
 // ------------------------------------------------------------
+//
+// Temporarily disabled while React and the API are both being
+// developed locally over HTTP.
+//
+// Later we can configure proper HTTPS development certificates.
+// ------------------------------------------------------------
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
+
+// ------------------------------------------------------------
+// CORS
+// ------------------------------------------------------------
+//
+// CORS must run before authentication and authorization so the
+// browser is allowed to communicate with the API.
+// ------------------------------------------------------------
+
+app.UseCors(
+    "ReactDevelopment");
 
 // ------------------------------------------------------------
 // Authentication
@@ -343,36 +389,43 @@ app.MapControllers();
 // DATABASE INITIALIZATION & SEEDING
 // ============================================================
 
-using (var scope = app.Services.CreateScope())
+using (var scope =
+       app.Services.CreateScope())
 {
-    var services = scope.ServiceProvider;
+    var services =
+        scope.ServiceProvider;
 
     var context =
-        services.GetRequiredService<AppDbContext>();
+        services
+            .GetRequiredService<AppDbContext>();
 
     // --------------------------------------------------------
     // Apply pending migrations
     // --------------------------------------------------------
 
-    await context.Database.MigrateAsync();
+    await context.Database
+        .MigrateAsync();
 
     // --------------------------------------------------------
     // Seed general application data
     // --------------------------------------------------------
 
-    await DbSeeder.SeedAsync(context);
+    await DbSeeder
+        .SeedAsync(context);
 
     // --------------------------------------------------------
     // Seed roles
     // --------------------------------------------------------
 
-    await RoleSeeder.SeedAsync(context);
+    await RoleSeeder
+        .SeedAsync(context);
 
     // --------------------------------------------------------
     // Seed administrator
     // --------------------------------------------------------
 
-    await AdminUserSeeder.SeedAsync(context);
+    await AdminUserSeeder
+        .SeedAsync(context);
 }
 
 // ============================================================
