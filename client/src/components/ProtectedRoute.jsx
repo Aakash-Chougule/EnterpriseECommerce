@@ -8,26 +8,39 @@ import { useAuth } from '../context/AuthContext'
 //
 // This component protects pages that require authentication.
 //
-// If the user is authenticated:
-//     → Display the requested page.
+// It can also optionally require a specific user role.
 //
-// If the user is NOT authenticated:
-//     → Redirect to /login.
+// Examples:
 //
-// Example:
+// Authentication only:
 //
 // <ProtectedRoute>
-//     <ProductsPage />
+//   <ProductsPage />
+// </ProtectedRoute>
+//
+// Admin only:
+//
+// <ProtectedRoute requiredRole="Admin">
+//   <AdminDashboardPage />
 // </ProtectedRoute>
 //
 // ============================================================
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({
+    children,
+    requiredRole
+}) {
 
-    const { isAuthenticated } = useAuth()
+    const {
+        isAuthenticated,
+        user
+    } = useAuth()
 
     // ----------------------------------------------------------
-    // User is not authenticated
+    // NOT LOGGED IN
+    // ----------------------------------------------------------
+    //
+    // If the user is not authenticated, redirect to login.
     // ----------------------------------------------------------
 
     if (!isAuthenticated) {
@@ -40,7 +53,35 @@ function ProtectedRoute({ children }) {
     }
 
     // ----------------------------------------------------------
-    // User is authenticated
+    // ROLE CHECK
+    // ----------------------------------------------------------
+    //
+    // If requiredRole was provided, the logged-in user's role
+    // must match it.
+    //
+    // Example:
+    //
+    // requiredRole = "Admin"
+    // user.role     = "Customer"
+    //
+    // Result:
+    // Redirect to home.
+    // ----------------------------------------------------------
+
+    if (
+        requiredRole &&
+        user?.role !== requiredRole
+    ) {
+        return (
+            <Navigate
+                to="/"
+                replace
+            />
+        )
+    }
+
+    // ----------------------------------------------------------
+    // ACCESS GRANTED
     // ----------------------------------------------------------
 
     return children

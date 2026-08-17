@@ -5,6 +5,14 @@ import apiClient from '../api/apiClient'
 // ============================================================
 //
 // Handles frontend communication with PaymentsController.
+//
+// React Page
+//     ↓
+// paymentService
+//     ↓
+// apiClient
+//     ↓
+// ASP.NET PaymentsController
 // ============================================================
 
 // ------------------------------------------------------------
@@ -40,6 +48,10 @@ export async function createPayment(
 // ------------------------------------------------------------
 // GET PAYMENT BY ORDER
 // ------------------------------------------------------------
+//
+// Backend:
+// GET /api/Payments/order/{orderId}
+// ------------------------------------------------------------
 
 export async function getPaymentByOrderId(
     orderId
@@ -47,6 +59,66 @@ export async function getPaymentByOrderId(
     const response =
         await apiClient.get(
             `/Payments/order/${orderId}`
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// MARK PAYMENT SUCCESSFUL
+// ------------------------------------------------------------
+//
+// Backend:
+// POST /api/Payments/{paymentId}/success
+//
+// Request:
+// {
+//   transactionId: "..."
+// }
+//
+// This is currently a testing/simulation endpoint.
+// Later a real payment gateway such as Razorpay or Stripe
+// should call the backend through a verified response/webhook.
+// ------------------------------------------------------------
+
+export async function markPaymentSuccessful(
+    paymentId,
+    transactionId
+) {
+    const response =
+        await apiClient.post(
+            `/Payments/${paymentId}/success`,
+            {
+                transactionId
+            }
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// MARK PAYMENT FAILED
+// ------------------------------------------------------------
+//
+// Backend:
+// POST /api/Payments/{paymentId}/fail
+//
+// Request:
+// {
+//   reason: "..."
+// }
+// ------------------------------------------------------------
+
+export async function markPaymentFailed(
+    paymentId,
+    reason
+) {
+    const response =
+        await apiClient.post(
+            `/Payments/${paymentId}/fail`,
+            {
+                reason
+            }
         )
 
     return response.data

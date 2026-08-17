@@ -7,6 +7,14 @@ namespace EnterpriseECommerce.Application.Services;
 /// <summary>
 /// Contains product-related business logic.
 ///
+/// Responsibilities:
+/// - Retrieve active products
+/// - Create new products
+/// - Reactivate inactive products with the same SKU
+/// - Update products
+/// - Soft-deactivate products
+/// - Map Product entities to ProductDto
+///
 /// Controllers should delegate business operations to this service
 /// rather than directly accessing repositories or the database.
 /// </summary>
@@ -14,206 +22,347 @@ public class ProductService
 {
     private readonly IProductRepository _productRepository;
 
-    public ProductService(IProductRepository productRepository)
+    public ProductService(
+        IProductRepository productRepository)
     {
         _productRepository = productRepository;
     }
 
-    /// <summary>
-    /// Retrieves all active products and maps them to ProductDto.
-    /// </summary>
-    public async Task<IReadOnlyList<ProductDto>> GetAllProductsAsync()
+    // ============================================================
+    // GET ALL ACTIVE PRODUCTS
+    // ============================================================
+
+    public async Task<IReadOnlyList<ProductDto>>
+        GetAllProductsAsync()
     {
-        var products = await _productRepository.GetAllAsync();
+        var products =
+            await _productRepository
+                .GetAllAsync();
 
         return products
-            .Where(product => product.IsActive)
-            .Select(product => new ProductDto
-            {
-                Id = product.Id,
-                CategoryId = product.CategoryId,
-                Name = product.Name,
-                Description = product.Description,
-                SKU = product.SKU,
-                Price = product.Price,
-                StockQuantity = product.StockQuantity,
-                IsActive = product.IsActive
-            })
+            .Where(product =>
+                product.IsActive)
+            .Select(MapToDto)
             .ToList();
     }
 
-    /// <summary>
-    /// Retrieves an active product by its unique identifier.
-    /// </summary>
-    public async Task<ProductDto?> GetProductByIdAsync(Guid id)
-    {
-        var product = await _productRepository.GetByIdAsync(id);
+    // ============================================================
+    // GET PRODUCT BY ID
+    // ============================================================
 
-        // Do not expose inactive products through the normal product API.
-        if (product is null || !product.IsActive)
+    public async Task<ProductDto?>
+        GetProductByIdAsync(
+            Guid id)
+    {
+        if (id == Guid.Empty)
         {
             return null;
         }
 
-        return new ProductDto
+        var product =
+            await _productRepository
+                .GetByIdAsync(id);
+
+        // Normal customer/product API should not expose
+        // inactive products.
+        if (product is null ||
+            !product.IsActive)
         {
-            Id = product.Id,
-            CategoryId = product.CategoryId,
-            Name = product.Name,
-            Description = product.Description,
-            SKU = product.SKU,
-            Price = product.Price,
-            StockQuantity = product.StockQuantity,
-            IsActive = product.IsActive
-        };
+            return null;
+        }
+
+        return MapToDto(product);
     }
 
-
-
+    // ============================================================
+    // CREATE PRODUCT
+    // ============================================================
     //
-    /// <summary>
-    /// Creates a new product.
-    /// 
-    /// The service converts the incoming request into a domain Product
-    /// and delegates persistence to the repository.
-    /// </summary>
+    // Behavior:
+    //
+    // New SKU
+    //     → Create new product.
+    //
+    // Existing ACTIVE SKU
+    //     → Reject duplicate.
+    //
+    // Existing INACTIVE SKU
+    //     → Restore/reactivate old product instead of
+    //       creating a duplicate database row.
+    // ============================================================
+
     public async Task<ProductDto> CreateProductAsync(
         CreateProductRequest request)
     {
-        // ------------------------------------------------------------
-        // Basic application-level validation
-        // ------------------------------------------------------------
+        ArgumentNullException.ThrowIfNull(
+            request);
 
-        if (request.CategoryId == Guid.Empty)
+        // --------------------------------------------------------
+        // Validation
+        // --------------------------------------------------------
+
+        if (request.CategoryId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "CategoryId is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.Name))
+        if (string.IsNullOrWhiteSpace(
+            request.Name))
         {
             throw new ArgumentException(
                 "Product name is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.SKU))
+        if (string.IsNullOrWhiteSpace(
+            request.SKU))
         {
             throw new ArgumentException(
                 "SKU is required.");
         }
 
-        // ------------------------------------------------------------
-        // Create the domain entity.
-        //
-        // The Product constructor itself also protects domain rules
-        // such as negative price and negative stock.
-        // ------------------------------------------------------------
-
-        var product = new Product(
-            request.CategoryId,
-            request.Name.Trim(),
-            request.Description?.Trim() ?? string.Empty,
-            request.SKU.Trim(),
-            request.Price,
-            request.StockQuantity);
-
-        // ------------------------------------------------------------
-        // Persist the new product.
-        // ------------------------------------------------------------
-
-        await _productRepository.AddAsync(product);
-
-        // ------------------------------------------------------------
-        // Convert the domain entity to ProductDto.
-        // ------------------------------------------------------------
-
-        return new ProductDto
+        if (request.Price < 0)
         {
-            Id = product.Id,
-            CategoryId = product.CategoryId,
-            Name = product.Name,
-            Description = product.Description,
-            SKU = product.SKU,
-            Price = product.Price,
-            StockQuantity = product.StockQuantity,
-            IsActive = product.IsActive
-        };
+            throw new ArgumentException(
+                "Price cannot be negative.");
+        }
+
+        if (request.StockQuantity < 0)
+        {
+            throw new ArgumentException(
+                "Stock quantity cannot be negative.");
+        }
+
+        var normalizedName =
+            request.Name.Trim();
+
+        var normalizedDescription =
+            request.Description?.Trim()
+            ?? string.Empty;
+
+        var normalizedSku =
+            request.SKU.Trim();
+
+        // --------------------------------------------------------
+        // Check whether SKU already exists.
+        //
+        // GetBySkuAsync must return both active and inactive
+        // products.
+        // --------------------------------------------------------
+
+        var existingProduct =
+            await _productRepository
+                .GetBySkuAsync(
+                    normalizedSku);
+
+        if (existingProduct is not null)
+        {
+            // ----------------------------------------------------
+            // Same SKU already belongs to an ACTIVE product.
+            // ----------------------------------------------------
+
+            if (existingProduct.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "A product with this SKU already exists.");
+            }
+
+            // ----------------------------------------------------
+            // Same SKU exists but product is INACTIVE.
+            //
+            // Restore the existing record.
+            // ----------------------------------------------------
+
+            existingProduct.UpdateCategory(
+                request.CategoryId);
+
+            existingProduct.UpdateDetails(
+                normalizedName,
+                normalizedDescription);
+
+            existingProduct.UpdatePrice(
+                request.Price);
+
+            existingProduct.UpdateStock(
+                request.StockQuantity);
+
+            existingProduct.Activate();
+
+            await _productRepository
+                .UpdateAsync(
+                    existingProduct);
+
+            return MapToDto(
+                existingProduct);
+        }
+
+        // --------------------------------------------------------
+        // Completely new SKU.
+        // --------------------------------------------------------
+
+        var product =
+            new Product(
+                request.CategoryId,
+                normalizedName,
+                normalizedDescription,
+                normalizedSku,
+                request.Price,
+                request.StockQuantity);
+
+        await _productRepository
+            .AddAsync(product);
+
+        return MapToDto(product);
     }
 
-    //
-    /// <summary>
-    /// Updates an existing product.
-    /// </summary>
-    public async Task<ProductDto?> UpdateProductAsync(
-        Guid id,
-        UpdateProductRequest request)
-    {
-        var product = await _productRepository.GetByIdAsync(id);
+    // ============================================================
+    // UPDATE PRODUCT
+    // ============================================================
 
-        // Product does not exist or has already been deactivated.
-        if (product is null || !product.IsActive)
+    public async Task<ProductDto?>
+        UpdateProductAsync(
+            Guid id,
+            UpdateProductRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(
+            request);
+
+        if (id == Guid.Empty)
         {
             return null;
         }
 
-        // ------------------------------------------------------------
-        // Update domain values through domain methods.
-        // ------------------------------------------------------------
+        var product =
+            await _productRepository
+                .GetByIdAsync(id);
+
+        // Product does not exist or has been deactivated.
+        if (product is null ||
+            !product.IsActive)
+        {
+            return null;
+        }
+
+        // --------------------------------------------------------
+        // Domain methods enforce product rules.
+        // --------------------------------------------------------
 
         product.UpdateDetails(
             request.Name,
             request.Description);
 
-        product.UpdatePrice(request.Price);
+        product.UpdatePrice(
+            request.Price);
 
-        product.UpdateStock(request.StockQuantity);
+        product.UpdateStock(
+            request.StockQuantity);
 
-        // ------------------------------------------------------------
+        // --------------------------------------------------------
         // Persist changes.
-        // ------------------------------------------------------------
+        // --------------------------------------------------------
 
-        await _productRepository.UpdateAsync(product);
+        await _productRepository
+            .UpdateAsync(product);
 
-        // ------------------------------------------------------------
-        // Map entity to DTO.
-        // ------------------------------------------------------------
-
-        return new ProductDto
-        {
-            Id = product.Id,
-            CategoryId = product.CategoryId,
-            Name = product.Name,
-            Description = product.Description,
-            SKU = product.SKU,
-            Price = product.Price,
-            StockQuantity = product.StockQuantity,
-            IsActive = product.IsActive
-        };
+        return MapToDto(product);
     }
 
+    // ============================================================
+    // DEACTIVATE PRODUCT
+    // ============================================================
     //
-    /// <summary>
-    /// Deactivates an existing product instead of physically deleting it.
-    ///
-    /// This is a soft delete. The product remains in the database,
-    /// but it will no longer appear in the normal product API.
-    /// </summary>
-    public async Task<bool> DeactivateProductAsync(Guid id)
-    {
-        var product = await _productRepository.GetByIdAsync(id);
+    // Soft delete:
+    //
+    // IsActive = false
+    //
+    // Product remains in PostgreSQL so historical order data and
+    // references remain valid.
+    // ============================================================
 
-        // Product doesn't exist or is already inactive.
-        if (product is null || !product.IsActive)
+    public async Task<bool>
+        DeactivateProductAsync(
+            Guid id)
+    {
+        if (id == Guid.Empty)
         {
             return false;
         }
 
-        // Use the domain method instead of directly changing IsActive.
+        var product =
+            await _productRepository
+                .GetByIdAsync(id);
+
+        if (product is null ||
+            !product.IsActive)
+        {
+            return false;
+        }
+
         product.Deactivate();
 
-        // Persist the change.
-        await _productRepository.UpdateAsync(product);
+        await _productRepository
+            .UpdateAsync(product);
 
         return true;
+    }
+    // ============================================================
+    // ADMIN - GET ALL PRODUCTS
+    // ============================================================
+    //
+    // Returns both active and inactive products.
+    // ============================================================
+
+    public async Task<IReadOnlyList<ProductDto>>
+        GetAllProductsForAdminAsync()
+    {
+        var products =
+            await _productRepository
+                .GetAllAsync();
+
+        return products
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    // ============================================================
+    // ENTITY → DTO MAPPING
+    // ============================================================
+
+    private static ProductDto MapToDto(
+        Product product)
+    {
+        return new ProductDto
+        {
+            Id =
+                product.Id,
+
+            CategoryId =
+                product.CategoryId,
+
+            Name =
+                product.Name,
+
+            Description =
+                product.Description,
+
+            SKU =
+                product.SKU,
+
+            Price =
+                product.Price,
+
+            StockQuantity =
+                product.StockQuantity,
+
+            IsActive =
+                product.IsActive,
+
+            CreatedAt =
+                product.CreatedAt,
+
+            UpdatedAt =
+                product.UpdatedAt
+        };
     }
 }

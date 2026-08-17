@@ -15,6 +15,8 @@ public interface ICategoryRepository
     /// </summary>
     Task<Category?> GetByIdAsync(Guid id);
 
+    Task<Category?> GetByNameAsync(string name);
+
     /// <summary>
     /// Retrieves all categories.
     /// </summary>

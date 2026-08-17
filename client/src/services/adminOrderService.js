@@ -1,104 +1,100 @@
 import apiClient from '../api/apiClient'
 
 // ============================================================
-// PRODUCT SERVICE
+// ADMIN ORDER SERVICE
+// ============================================================
+//
+// Handles communication with AdminOrdersController.
+//
+// All these endpoints require:
+// Role = Admin
 // ============================================================
 
 // ------------------------------------------------------------
-// GET ACTIVE PRODUCTS
-// ------------------------------------------------------------
-
-export async function getProducts() {
-
-    const response =
-        await apiClient.get(
-            '/Products'
-        )
-
-    return response.data
-}
-
-// ------------------------------------------------------------
-// GET PRODUCT BY ID
-// ------------------------------------------------------------
-
-export async function getProductById(
-    productId
-) {
-
-    const response =
-        await apiClient.get(
-            `/Products/${productId}`
-        )
-
-    return response.data
-}
-
-// ------------------------------------------------------------
-// ADMIN - GET ALL PRODUCTS
+// GET ALL ORDERS
 // ------------------------------------------------------------
 //
-// Includes:
-// - Active products
-// - Inactive products
+// GET /api/admin/orders
 // ------------------------------------------------------------
 
-export async function getAllProductsForAdmin() {
+export async function getAdminOrders() {
 
     const response =
         await apiClient.get(
-            '/Products/admin/all'
+            '/admin/orders'
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// CREATE PRODUCT
+// CONFIRM ORDER
+// ------------------------------------------------------------
+//
+// PUT /api/admin/orders/{id}/confirm
 // ------------------------------------------------------------
 
-export async function createProduct(
-    productData
-) {
-
-    const response =
-        await apiClient.post(
-            '/Products',
-            productData
-        )
-
-    return response.data
-}
-
-// ------------------------------------------------------------
-// UPDATE PRODUCT
-// ------------------------------------------------------------
-
-export async function updateProduct(
-    productId,
-    productData
-) {
+export async function confirmOrder(orderId) {
 
     const response =
         await apiClient.put(
-            `/Products/${productId}`,
-            productData
+            `/admin/orders/${orderId}/confirm`
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// DEACTIVATE PRODUCT
+// START PROCESSING
 // ------------------------------------------------------------
 
-export async function deactivateProduct(
-    productId
-) {
+export async function startProcessingOrder(orderId) {
 
     const response =
-        await apiClient.delete(
-            `/Products/${productId}`
+        await apiClient.put(
+            `/admin/orders/${orderId}/processing`
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// SHIP ORDER
+// ------------------------------------------------------------
+
+export async function shipOrder(orderId) {
+
+    const response =
+        await apiClient.put(
+            `/admin/orders/${orderId}/ship`
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// DELIVER ORDER
+// ------------------------------------------------------------
+
+export async function deliverOrder(orderId) {
+
+    const response =
+        await apiClient.put(
+            `/admin/orders/${orderId}/deliver`
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// CANCEL ORDER
+// ------------------------------------------------------------
+
+export async function cancelOrder(orderId) {
+
+    const response =
+        await apiClient.put(
+            `/admin/orders/${orderId}/cancel`
         )
 
     return response.data

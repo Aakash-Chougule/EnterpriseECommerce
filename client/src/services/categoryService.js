@@ -1,104 +1,112 @@
 import apiClient from '../api/apiClient'
 
 // ============================================================
-// PRODUCT SERVICE
+// CATEGORY SERVICE
 // ============================================================
 
 // ------------------------------------------------------------
-// GET ACTIVE PRODUCTS
+// GET ACTIVE CATEGORIES
 // ------------------------------------------------------------
 
-export async function getProducts() {
+export async function getCategories() {
 
     const response =
         await apiClient.get(
-            '/Products'
+            '/Categories'
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// GET PRODUCT BY ID
+// GET CATEGORY BY ID
 // ------------------------------------------------------------
 
-export async function getProductById(
-    productId
+export async function getCategoryById(
+    categoryId
 ) {
 
     const response =
         await apiClient.get(
-            `/Products/${productId}`
+            `/Categories/${categoryId}`
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// ADMIN - GET ALL PRODUCTS
+// ADMIN - GET ALL CATEGORIES
 // ------------------------------------------------------------
 //
 // Includes:
-// - Active products
-// - Inactive products
+// - Active categories
+// - Inactive categories
 // ------------------------------------------------------------
 
-export async function getAllProductsForAdmin() {
+export async function getAllCategoriesForAdmin() {
 
     const response =
         await apiClient.get(
-            '/Products/admin/all'
+            '/Categories/admin/all'
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// CREATE PRODUCT
+// CREATE CATEGORY
 // ------------------------------------------------------------
 
-export async function createProduct(
-    productData
+export async function createCategory(
+    name,
+    description
 ) {
 
     const response =
         await apiClient.post(
-            '/Products',
-            productData
+            '/Categories',
+            {
+                name,
+                description
+            }
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// UPDATE PRODUCT
+// UPDATE CATEGORY
 // ------------------------------------------------------------
 
-export async function updateProduct(
-    productId,
-    productData
+export async function updateCategory(
+    categoryId,
+    name,
+    description
 ) {
 
     const response =
         await apiClient.put(
-            `/Products/${productId}`,
-            productData
+            `/Categories/${categoryId}`,
+            {
+                name,
+                description
+            }
         )
 
     return response.data
 }
 
 // ------------------------------------------------------------
-// DEACTIVATE PRODUCT
+// DEACTIVATE CATEGORY
 // ------------------------------------------------------------
 
-export async function deactivateProduct(
-    productId
+export async function deactivateCategory(
+    categoryId
 ) {
 
     const response =
         await apiClient.delete(
-            `/Products/${productId}`
+            `/Categories/${categoryId}`
         )
 
     return response.data

@@ -41,6 +41,16 @@ public class CategoryRepository : ICategoryRepository
             .ToListAsync();
     }
 
+    public async Task<Category?> GetByNameAsync(
+    string name)
+    {
+        return await _context.Categories
+            .FirstOrDefaultAsync(
+                category =>
+                    category.Name.ToLower() ==
+                    name.ToLower());
+    }
+
     /// <summary>
     /// Adds a new category to the database.
     /// </summary>

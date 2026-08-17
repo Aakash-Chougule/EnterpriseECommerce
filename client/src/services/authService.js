@@ -1,18 +1,68 @@
 import axios from 'axios'
 
-// Base URL of your ASP.NET Core API.
-// Later we can move this into an environment variable.
-const API_URL = 'http://localhost:5042/api/Auth'
+// ============================================================
+// AUTH SERVICE
+// ============================================================
+//
+// Handles frontend communication with AuthController.
+//
+// React Page
+//     ↓
+// authService
+//     ↓
+// Axios
+//     ↓
+// ASP.NET AuthController
+// ============================================================
 
-// Sends login credentials to the backend.
-export async function loginUser(email, password) {
-    const response = await axios.post(
-        `${API_URL}/login`,
-        {
-            email,
-            password
-        }
-    )
+const API_URL =
+    'http://localhost:5042/api/Auth'
+
+// ------------------------------------------------------------
+// LOGIN
+// ------------------------------------------------------------
+
+export async function loginUser(
+    email,
+    password
+) {
+    const response =
+        await axios.post(
+            `${API_URL}/login`,
+            {
+                email,
+                password
+            }
+        )
+
+    return response.data
+}
+
+// ------------------------------------------------------------
+// REGISTER
+// ------------------------------------------------------------
+//
+// Backend:
+// POST /api/Auth/register
+//
+// Request body:
+// {
+//   firstName: "...",
+//   lastName: "...",
+//   email: "...",
+//   password: "...",
+//   phoneNumber: "..."
+// }
+// ------------------------------------------------------------
+
+export async function registerUser(
+    registerData
+) {
+    const response =
+        await axios.post(
+            `${API_URL}/register`,
+            registerData
+        )
 
     return response.data
 }

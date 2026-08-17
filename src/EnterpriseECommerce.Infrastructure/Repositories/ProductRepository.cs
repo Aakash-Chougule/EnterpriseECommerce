@@ -70,4 +70,14 @@ public class ProductRepository : IProductRepository
 
         await _context.SaveChangesAsync();
     }
+
+    public async Task<Product?> GetBySkuAsync(
+    string sku)
+    {
+        return await _context.Products
+            .FirstOrDefaultAsync(
+                product =>
+                    product.SKU.ToLower() ==
+                    sku.ToLower());
+    }
 }

@@ -1,96 +1,42 @@
 import {
     BrowserRouter,
     Routes,
-    Route,
-    Link
+    Route
 } from 'react-router-dom'
 
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import ProductsPage from './pages/ProductsPage'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrderSuccessPage from './pages/OrderSuccessPage'
 import OrdersPage from './pages/OrdersPage'
+import PaymentPage from './pages/PaymentPage'
+import AdminDashboardPage
+    from './pages/admin/AdminDashboardPage'
+import AdminProductsPage
+    from './pages/admin/AdminProductsPage'
+import AdminOrdersPage
+    from './pages/admin/AdminOrdersPage'
+import AdminCategoriesPage
+    from './pages/admin/AdminCategoriesPage'
+import AdminDataPage
+    from './pages/admin/AdminDataPage'
 
+import Navbar from './components/Navbar'
 import ProtectedRoute from './components/ProtectedRoute'
-import { useAuth } from './context/AuthContext'
 
 function App() {
-
-    // Authentication information is available globally
-    // because App is wrapped inside AuthProvider.
-    const {
-        user,
-        isAuthenticated,
-        logout
-    } = useAuth()
 
     return (
         <BrowserRouter>
 
             {/* ======================================================
-          TEMPORARY NAVIGATION
-
-          Later we will replace this with a professional Navbar
-          component and proper styling.
+          GLOBAL NAVIGATION
          ====================================================== */}
 
-            <nav>
-
-                <Link to="/">
-                    Home
-                </Link>
-
-                {' | '}
-
-                <Link to="/products">
-                    Products
-                </Link>
-
-             
-
-                {' | '}
-
-                <Link to="/cart">
-                    Cart
-                </Link>
-
-                {' | '}
-
-                <Link to="/orders">
-                    My Orders
-                </Link>
-
-
-
-                {/* -----------------------------------------------
-            Show different navigation depending on whether
-            the user is logged in.
-           ----------------------------------------------- */}
-
-                {isAuthenticated ? (
-                    <>
-                        <span>
-                            Welcome {user?.firstName}
-                        </span>
-
-                        {' | '}
-
-                        <button
-                            type="button"
-                            onClick={logout}
-                        >
-                            Logout
-                        </button>
-                    </>
-                ) : (
-                    <Link to="/login">
-                        Login
-                    </Link>
-                )}
-
-            </nav>
+            <Navbar />
 
             {/* ======================================================
           APPLICATION ROUTES
@@ -98,21 +44,28 @@ function App() {
 
             <Routes>
 
-                {/* Public route */}
+                {/* ====================================================
+            PUBLIC ROUTES
+           ==================================================== */}
 
                 <Route
                     path="/"
                     element={<HomePage />}
                 />
 
-                {/* Public route */}
-
                 <Route
                     path="/login"
                     element={<LoginPage />}
                 />
 
-                {/* Protected route */}
+                <Route
+                    path="/register"
+                    element={<RegisterPage />}
+                />
+
+                {/* ====================================================
+            PROTECTED ROUTES
+           ==================================================== */}
 
                 <Route
                     path="/products"
@@ -142,6 +95,24 @@ function App() {
                 />
 
                 <Route
+                    path="/orders"
+                    element={
+                        <ProtectedRoute>
+                            <OrdersPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/payment/:orderId"
+                    element={
+                        <ProtectedRoute>
+                            <PaymentPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
                     path="/order-success/:orderId"
                     element={
                         <ProtectedRoute>
@@ -151,10 +122,46 @@ function App() {
                 />
 
                 <Route
-                    path="/orders"
+                    path="/admin"
                     element={
-                        <ProtectedRoute>
-                            <OrdersPage />
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminDashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/admin/products"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminProductsPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/admin/orders"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminOrdersPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/admin/categories"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminCategoriesPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/admin/data"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminDataPage />
                         </ProtectedRoute>
                     }
                 />

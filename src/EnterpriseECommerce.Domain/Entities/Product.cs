@@ -116,4 +116,21 @@ public class Product
         StockQuantity += quantity;
         UpdatedAt = DateTime.UtcNow;
     }
+    public void Activate()
+    {
+        IsActive = true;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateCategory(Guid categoryId)
+    {
+        if (categoryId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "CategoryId is required.");
+        }
+
+        CategoryId = categoryId;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

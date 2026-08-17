@@ -209,7 +209,7 @@ function CheckoutPage() {
                 // ====================================================
 
                 navigate(
-                    `/order-success/${order.id}`
+                    `/payment/${order.id}`
                 )
             }
             catch (err) {
