@@ -94,6 +94,55 @@ public class CartController : ControllerBase
         }
     }
 
+
+    // ------------------------------------------------------------
+    // PUT: api/Cart/items/{productId}
+    // ------------------------------------------------------------
+    // Updates the quantity of an existing product in the cart.
+    // ------------------------------------------------------------
+
+    [HttpPut("items/{productId:guid}")]
+    public async Task<ActionResult<CartDto>> UpdateItemQuantity(
+        Guid productId,
+        [FromBody] UpdateCartItemRequest request)
+    {
+        var userId = GetUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "User ID was not found in the authentication token."
+            });
+        }
+
+        try
+        {
+            var cart =
+                await _cartService.UpdateItemQuantityAsync(
+                    userId.Value,
+                    productId,
+                    request);
+
+            return Ok(cart);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
     // ------------------------------------------------------------
     // DELETE: api/Cart/items/{productId}
     // ------------------------------------------------------------

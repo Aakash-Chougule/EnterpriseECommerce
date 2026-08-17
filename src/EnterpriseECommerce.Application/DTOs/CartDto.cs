@@ -9,7 +9,15 @@ public class CartDto
 
     public Guid UserId { get; set; }
 
-    public List<CartItemDto> Items { get; set; } = new();
+    public List<CartItemDto> Items { get; set; } =
+        new();
+
+    /// <summary>
+    /// Current total value of all products in the cart.
+    ///
+    /// This value is calculated using the current product prices.
+    /// </summary>
+    public decimal TotalAmount { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

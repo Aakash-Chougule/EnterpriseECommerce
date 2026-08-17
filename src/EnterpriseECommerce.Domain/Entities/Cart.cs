@@ -102,6 +102,35 @@ public class Cart
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateItemQuantity(
+    Guid productId,
+    int quantity)
+    {
+        if (productId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "ProductId is required.");
+        }
+
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "Quantity must be greater than zero.");
+        }
+
+        var item = Items.FirstOrDefault(
+            item => item.ProductId == productId);
+
+        if (item is null)
+        {
+            throw new KeyNotFoundException(
+                "Cart item not found.");
+        }
+
+        item.UpdateQuantity(quantity);
+
+        UpdatedAt = DateTime.UtcNow;
+    }
     public void Clear()
     {
         Items.Clear();

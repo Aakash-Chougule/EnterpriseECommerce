@@ -34,6 +34,36 @@ export async function addItemToCart(
     return response.data
 }
 
+// ============================================================
+// UPDATE CART ITEM QUANTITY
+// ============================================================
+//
+// Updates the quantity of an existing product in the cart.
+//
+// Backend endpoint:
+// PUT /api/Cart/items/{productId}
+//
+// Example body:
+// {
+//   quantity: 3
+// }
+// ============================================================
+
+export async function updateCartItemQuantity(
+    productId,
+    quantity
+) {
+    const response =
+        await apiClient.put(
+            `/Cart/items/${productId}`,
+            {
+                quantity
+            }
+        )
+
+    return response.data
+}
+
 // Remove a product from the cart.
 export async function removeItemFromCart(
     productId

@@ -9,6 +9,9 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProductsPage from './pages/ProductsPage'
 import CartPage from './pages/CartPage'
+import CheckoutPage from './pages/CheckoutPage'
+import OrderSuccessPage from './pages/OrderSuccessPage'
+import OrdersPage from './pages/OrdersPage'
 
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
@@ -52,6 +55,14 @@ function App() {
                 <Link to="/cart">
                     Cart
                 </Link>
+
+                {' | '}
+
+                <Link to="/orders">
+                    My Orders
+                </Link>
+
+
 
                 {/* -----------------------------------------------
             Show different navigation depending on whether
@@ -117,6 +128,33 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <CartPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/checkout"
+                    element={
+                        <ProtectedRoute>
+                            <CheckoutPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/order-success/:orderId"
+                    element={
+                        <ProtectedRoute>
+                            <OrderSuccessPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/orders"
+                    element={
+                        <ProtectedRoute>
+                            <OrdersPage />
                         </ProtectedRoute>
                     }
                 />
