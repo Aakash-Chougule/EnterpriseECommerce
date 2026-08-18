@@ -11,33 +11,16 @@ import {
     registerUser
 } from '../services/authService'
 
+import './Auth.css'
+
 // ============================================================
 // REGISTER PAGE
-// ============================================================
-//
-// This page allows a new customer to create an account.
-//
-// React concepts used here:
-// - useState
-// - Controlled inputs
-// - Form submission
-// - Frontend validation
-// - API calls
-// - Navigation
 // ============================================================
 
 function RegisterPage() {
 
     const navigate =
         useNavigate()
-
-    // ----------------------------------------------------------
-    // FORM STATE
-    // ----------------------------------------------------------
-    //
-    // Instead of creating one useState for every field,
-    // we keep all registration fields inside one object.
-    // ----------------------------------------------------------
 
     const [formData, setFormData] =
         useState({
@@ -49,10 +32,6 @@ function RegisterPage() {
             phoneNumber: ''
         })
 
-    // ----------------------------------------------------------
-    // UI STATE
-    // ----------------------------------------------------------
-
     const [error, setError] =
         useState('')
 
@@ -62,460 +41,435 @@ function RegisterPage() {
     const [loading, setLoading] =
         useState(false)
 
-    // ==========================================================
-    // HANDLE INPUT CHANGE
-    // ==========================================================
-    //
-    // This one function handles every form input.
-    //
-    // Example:
-    //
-    // name="firstName"
-    // value="Aakash"
-    //
-    // becomes:
-    //
-    // formData.firstName = "Aakash"
-    // ==========================================================
+    // ========================================================
+    // INPUT CHANGE
+    // ========================================================
 
-    const handleChange =
-        (event) => {
+    const handleChange = (event) => {
 
-            const {
-                name,
-                value
-            } = event.target
+        const {
+            name,
+            value
+        } = event.target
 
-            setFormData(
-                (currentData) => ({
-                    ...currentData,
+        setFormData(
+            currentData => ({
+                ...currentData,
+                [name]: value
+            })
+        )
+    }
 
-                    [name]: value
-                })
-            )
-        }
-
-    // ==========================================================
+    // ========================================================
     // REGISTER
-    // ==========================================================
+    // ========================================================
 
-    const handleSubmit =
-        async (event) => {
+    const handleSubmit = async (event) => {
 
-            // Prevent normal browser page refresh.
-            event.preventDefault()
+        event.preventDefault()
 
-            setError('')
-            setSuccess('')
+        setError('')
+        setSuccess('')
 
-            // ------------------------------------------------------
-            // FRONTEND VALIDATION
-            // ------------------------------------------------------
-
-            if (!formData.firstName.trim()) {
-                setError(
-                    'First name is required.'
-                )
-
-                return
-            }
-
-            if (!formData.lastName.trim()) {
-                setError(
-                    'Last name is required.'
-                )
-
-                return
-            }
-
-            if (!formData.email.trim()) {
-                setError(
-                    'Email is required.'
-                )
-
-                return
-            }
-
-            if (!formData.password) {
-                setError(
-                    'Password is required.'
-                )
-
-                return
-            }
-
-            if (
-                formData.password.length < 6
-            ) {
-                setError(
-                    'Password must contain at least 6 characters.'
-                )
-
-                return
-            }
-
-            if (
-                formData.password !==
-                formData.confirmPassword
-            ) {
-                setError(
-                    'Passwords do not match.'
-                )
-
-                return
-            }
-
-            try {
-
-                setLoading(true)
-
-                // ----------------------------------------------------
-                // Build request for ASP.NET.
-                //
-                // confirmPassword is NOT sent because your backend
-                // RegisterRequestDto does not contain that property.
-                // ----------------------------------------------------
-
-                const registerData = {
-                    firstName:
-                        formData.firstName.trim(),
-
-                    lastName:
-                        formData.lastName.trim(),
-
-                    email:
-                        formData.email.trim(),
-
-                    password:
-                        formData.password,
-
-                    phoneNumber:
-                        formData.phoneNumber.trim()
-                        || null
-                }
-
-                const response =
-                    await registerUser(
-                        registerData
-                    )
-
-                console.log(
-                    'Registration successful:',
-                    response
-                )
-
-                setSuccess(
-                    'Account created successfully.'
-                )
-
-                // ----------------------------------------------------
-                // Redirect to login after successful registration.
-                // ----------------------------------------------------
-
-                setTimeout(() => {
-
-                    navigate('/login')
-
-                }, 1000)
-            }
-            catch (err) {
-
-                console.error(
-                    'Registration failed:',
-                    err
-                )
-
-                const message =
-                    err.response?.data?.message ||
-                    'Registration failed. Please try again.'
-
-                setError(message)
-            }
-            finally {
-
-                setLoading(false)
-            }
+        if (!formData.firstName.trim()) {
+            setError('First name is required.')
+            return
         }
 
-    // ==========================================================
-    // UI
-    // ==========================================================
+        if (!formData.lastName.trim()) {
+            setError('Last name is required.')
+            return
+        }
+
+        if (!formData.email.trim()) {
+            setError('Email is required.')
+            return
+        }
+
+        if (!formData.password) {
+            setError('Password is required.')
+            return
+        }
+
+        if (formData.password.length < 6) {
+            setError(
+                'Password must contain at least 6 characters.'
+            )
+            return
+        }
+
+        if (
+            formData.password !==
+            formData.confirmPassword
+        ) {
+            setError('Passwords do not match.')
+            return
+        }
+
+        try {
+
+            setLoading(true)
+
+            const registerData = {
+
+                firstName:
+                    formData.firstName.trim(),
+
+                lastName:
+                    formData.lastName.trim(),
+
+                email:
+                    formData.email.trim(),
+
+                password:
+                    formData.password,
+
+                phoneNumber:
+                    formData.phoneNumber.trim() ||
+                    null
+            }
+
+            const response =
+                await registerUser(
+                    registerData
+                )
+
+            console.log(
+                'Registration successful:',
+                response
+            )
+
+            setSuccess(
+                'Account created successfully. Redirecting to login...'
+            )
+
+            setTimeout(() => {
+                navigate('/login')
+            }, 1000)
+        }
+        catch (err) {
+
+            console.error(
+                'Registration failed:',
+                err
+            )
+
+            const message =
+                err.response?.data?.message ||
+                'Registration failed. Please try again.'
+
+            setError(message)
+        }
+        finally {
+
+            setLoading(false)
+        }
+    }
 
     return (
-        <div>
 
-            <h1>
-                Create Account
-            </h1>
+        <main className="auth-page">
 
-            <form
-                onSubmit={handleSubmit}
-            >
+            <div className="auth-container register-container">
 
-                {/* ================================================
-            FIRST NAME
-           ================================================ */}
+                {/* ==================================================
+                    LEFT SIDE
+                   ================================================== */}
 
-                <div>
+                <section className="auth-showcase">
 
-                    <label
-                        htmlFor="firstName"
-                    >
-                        First Name
-                    </label>
+                    <div className="auth-showcase-content">
 
-                    <br />
+                        <span className="auth-showcase-badge">
+                            Join Enterprise Commerce
+                        </span>
 
-                    <input
-                        id="firstName"
-                        name="firstName"
-                        type="text"
+                        <h1>
+                            Create your account.
+                        </h1>
 
-                        value={
-                            formData.firstName
-                        }
+                        <p>
+                            Register today and start exploring
+                            our products and shopping experience.
+                        </p>
 
-                        placeholder={
-                            'Enter first name'
-                        }
+                        <div className="auth-benefits">
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                            <div className="auth-benefit">
 
-                </div>
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
 
-                <br />
+                                <div>
+                                    <strong>
+                                        Simple Shopping
+                                    </strong>
 
-                {/* ================================================
-            LAST NAME
-           ================================================ */}
+                                    <p>
+                                        Browse products and manage
+                                        your shopping cart.
+                                    </p>
+                                </div>
 
-                <div>
+                            </div>
 
-                    <label
-                        htmlFor="lastName"
-                    >
-                        Last Name
-                    </label>
+                            <div className="auth-benefit">
 
-                    <br />
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
 
-                    <input
-                        id="lastName"
-                        name="lastName"
-                        type="text"
+                                <div>
+                                    <strong>
+                                        Track Your Orders
+                                    </strong>
 
-                        value={
-                            formData.lastName
-                        }
+                                    <p>
+                                        Access your order history
+                                        whenever you need it.
+                                    </p>
+                                </div>
 
-                        placeholder={
-                            'Enter last name'
-                        }
+                            </div>
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                            <div className="auth-benefit">
 
-                </div>
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
 
-                <br />
+                                <div>
+                                    <strong>
+                                        Secure Account
+                                    </strong>
 
-                {/* ================================================
-            EMAIL
-           ================================================ */}
+                                    <p>
+                                        Your account uses secure
+                                        authentication.
+                                    </p>
+                                </div>
 
-                <div>
+                            </div>
 
-                    <label
-                        htmlFor="email"
-                    >
-                        Email
-                    </label>
+                        </div>
 
-                    <br />
+                    </div>
 
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
+                </section>
 
-                        value={
-                            formData.email
-                        }
+                {/* ==================================================
+                    REGISTER FORM
+                   ================================================== */}
 
-                        placeholder={
-                            'Enter email address'
-                        }
+                <section className="auth-form-section">
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                    <div className="auth-card register-card">
 
-                </div>
+                        <div className="auth-card-header">
 
-                <br />
+                            <div className="auth-logo">
+                                E
+                            </div>
 
-                {/* ================================================
-            PHONE NUMBER
-           ================================================ */}
+                            <h2>
+                                Create an account
+                            </h2>
 
-                <div>
+                            <p>
+                                Enter your information below
+                                to get started.
+                            </p>
 
-                    <label
-                        htmlFor="phoneNumber"
-                    >
-                        Phone Number
-                    </label>
+                        </div>
 
-                    <br />
+                        {error && (
 
-                    <input
-                        id="phoneNumber"
-                        name="phoneNumber"
-                        type="tel"
+                            <div className="auth-alert auth-alert-error">
+                                <span>!</span>
 
-                        value={
-                            formData.phoneNumber
-                        }
+                                {error}
+                            </div>
 
-                        placeholder={
-                            'Enter phone number'
-                        }
+                        )}
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                        {success && (
 
-                </div>
+                            <div className="auth-alert auth-alert-success">
+                                <span>✓</span>
 
-                <br />
+                                {success}
+                            </div>
 
-                {/* ================================================
-            PASSWORD
-           ================================================ */}
+                        )}
 
-                <div>
+                        <form
+                            onSubmit={handleSubmit}
+                            className="auth-form"
+                        >
 
-                    <label
-                        htmlFor="password"
-                    >
-                        Password
-                    </label>
+                            <div className="auth-name-grid">
 
-                    <br />
+                                <div className="auth-form-group">
 
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
+                                    <label htmlFor="firstName">
+                                        First Name
+                                    </label>
 
-                        value={
-                            formData.password
-                        }
+                                    <input
+                                        id="firstName"
+                                        name="firstName"
+                                        type="text"
+                                        value={formData.firstName}
+                                        placeholder="First name"
+                                        autoComplete="given-name"
+                                        onChange={handleChange}
+                                    />
 
-                        placeholder={
-                            'Create password'
-                        }
+                                </div>
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                                <div className="auth-form-group">
 
-                </div>
+                                    <label htmlFor="lastName">
+                                        Last Name
+                                    </label>
 
-                <br />
+                                    <input
+                                        id="lastName"
+                                        name="lastName"
+                                        type="text"
+                                        value={formData.lastName}
+                                        placeholder="Last name"
+                                        autoComplete="family-name"
+                                        onChange={handleChange}
+                                    />
 
-                {/* ================================================
-            CONFIRM PASSWORD
-           ================================================ */}
+                                </div>
+
+                            </div>
 
-                <div>
+                            <div className="auth-form-group">
 
-                    <label
-                        htmlFor="confirmPassword"
-                    >
-                        Confirm Password
-                    </label>
+                                <label htmlFor="email">
+                                    Email Address
+                                </label>
 
-                    <br />
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    value={formData.email}
+                                    placeholder="name@example.com"
+                                    autoComplete="email"
+                                    onChange={handleChange}
+                                />
 
-                    <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
+                            </div>
 
-                        value={
-                            formData.confirmPassword
-                        }
+                            <div className="auth-form-group">
 
-                        placeholder={
-                            'Confirm password'
-                        }
+                                <label htmlFor="phoneNumber">
+                                    Phone Number
 
-                        onChange={
-                            handleChange
-                        }
-                    />
+                                    <span className="optional-label">
+                                        Optional
+                                    </span>
+                                </label>
 
-                </div>
+                                <input
+                                    id="phoneNumber"
+                                    name="phoneNumber"
+                                    type="tel"
+                                    value={formData.phoneNumber}
+                                    placeholder="Enter phone number"
+                                    autoComplete="tel"
+                                    onChange={handleChange}
+                                />
 
-                <br />
+                            </div>
 
-                {/* ================================================
-            ERROR / SUCCESS
-           ================================================ */}
+                            <div className="auth-name-grid">
 
-                {error && (
-                    <p>
-                        {error}
-                    </p>
-                )}
+                                <div className="auth-form-group">
 
-                {success && (
-                    <p>
-                        {success}
-                    </p>
-                )}
+                                    <label htmlFor="password">
+                                        Password
+                                    </label>
 
-                {/* ================================================
-            SUBMIT
-           ================================================ */}
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        value={formData.password}
+                                        placeholder="Minimum 6 characters"
+                                        autoComplete="new-password"
+                                        onChange={handleChange}
+                                    />
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {
-                        loading
-                            ? 'Creating Account...'
-                            : 'Register'
-                    }
-                </button>
+                                </div>
 
-            </form>
+                                <div className="auth-form-group">
 
-            <br />
+                                    <label htmlFor="confirmPassword">
+                                        Confirm Password
+                                    </label>
 
-            <p>
+                                    <input
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        type="password"
+                                        value={
+                                            formData.confirmPassword
+                                        }
+                                        placeholder="Repeat password"
+                                        autoComplete="new-password"
+                                        onChange={handleChange}
+                                    />
 
-                Already have an account?
+                                </div>
 
-                {' '}
+                            </div>
 
-                <Link to="/login">
-                    Login
-                </Link>
+                            <button
+                                type="submit"
+                                className="auth-submit-button"
+                                disabled={loading}
+                            >
+                                {
+                                    loading
+                                        ? 'Creating Account...'
+                                        : 'Create Account'
+                                }
 
-            </p>
+                                {!loading && (
+                                    <span>
+                                        →
+                                    </span>
+                                )}
 
-        </div>
+                            </button>
+
+                        </form>
+
+                        <div className="auth-footer">
+
+                            <span>
+                                Already have an account?
+                            </span>
+
+                            <Link to="/login">
+                                Sign in
+                            </Link>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </main>
     )
 }
 

@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useMemo,
     useState
 } from 'react'
 
@@ -12,15 +13,10 @@ import {
     cancelOrder
 } from '../../services/adminOrderService'
 
+import './AdminOrdersPage.css'
 
 // ============================================================
-// ENUM LABEL HELPERS
-// ============================================================
-//
-// ASP.NET currently returns enum values as numbers.
-//
-// These helpers convert backend numeric values into readable
-// labels for the UI.
+// ENUM LABELS
 // ============================================================
 
 const orderStatusLabels = {
@@ -40,25 +36,23 @@ const paymentStatusLabels = {
 }
 
 function getOrderStatusLabel(status) {
-    return orderStatusLabels[status] ?? 'Unknown'
+
+    return (
+        orderStatusLabels[status] ??
+        'Unknown'
+    )
 }
 
 function getPaymentStatusLabel(status) {
-    return paymentStatusLabels[status] ?? 'Unknown'
+
+    return (
+        paymentStatusLabels[status] ??
+        'Unknown'
+    )
 }
+
 // ============================================================
 // ADMIN ORDERS PAGE
-// ============================================================
-//
-// Admin capabilities:
-// - View all orders
-// - Confirm pending orders
-// - Move confirmed orders to processing
-// - Ship processing orders
-// - Deliver shipped orders
-// - Cancel eligible orders
-//
-// The UI follows the same lifecycle rules as the backend.
 // ============================================================
 
 function AdminOrdersPage() {
@@ -69,8 +63,10 @@ function AdminOrdersPage() {
     const [loading, setLoading] =
         useState(true)
 
-    const [processingOrderId, setProcessingOrderId] =
-        useState(null)
+    const [
+        processingOrderId,
+        setProcessingOrderId
+    ] = useState(null)
 
     const [error, setError] =
         useState('')
@@ -78,9 +74,22 @@ function AdminOrdersPage() {
     const [message, setMessage] =
         useState('')
 
-    // ==========================================================
+    const [search, setSearch] =
+        useState('')
+
+    const [
+        statusFilter,
+        setStatusFilter
+    ] = useState('all')
+
+    const [
+        paymentFilter,
+        setPaymentFilter
+    ] = useState('all')
+
+    // ========================================================
     // LOAD ORDERS
-    // ==========================================================
+    // ========================================================
 
     const loadOrders = async () => {
 
@@ -92,7 +101,11 @@ function AdminOrdersPage() {
             const data =
                 await getAdminOrders()
 
-            setOrders(data)
+            setOrders(
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
         }
         catch (err) {
 
@@ -112,12 +125,9 @@ function AdminOrdersPage() {
         }
     }
 
-    // ==========================================================
-    // RUN STATUS CHANGE
-    // ==========================================================
-    //
-    // We reuse one function for all order status operations.
-    // ==========================================================
+    // ========================================================
+    // STATUS CHANGE
+    // ========================================================
 
     const handleStatusChange =
         async (
@@ -128,14 +138,20 @@ function AdminOrdersPage() {
 
             try {
 
-                setProcessingOrderId(orderId)
+                setProcessingOrderId(
+                    orderId
+                )
 
                 setError('')
                 setMessage('')
 
-                await operation(orderId)
+                await operation(
+                    orderId
+                )
 
-                setMessage(successMessage)
+                setMessage(
+                    successMessage
+                )
 
                 await loadOrders()
             }
@@ -153,13 +169,15 @@ function AdminOrdersPage() {
             }
             finally {
 
-                setProcessingOrderId(null)
+                setProcessingOrderId(
+                    null
+                )
             }
         }
 
-    // ==========================================================
+    // ========================================================
     // INITIAL LOAD
-    // ==========================================================
+    // ========================================================
 
     useEffect(() => {
 
@@ -167,323 +185,982 @@ function AdminOrdersPage() {
 
     }, [])
 
-    // ==========================================================
+    // ========================================================
+    // HELPERS
+    // ========================================================
+
+    const formatPrice =
+        (value) =>
+            Number(
+                value ?? 0
+            ).toLocaleString(
+                'en-IN',
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            )
+
+    const getOrderStatusClass =
+        (status) => {
+
+            switch (status) {
+
+                case 1:
+                    return 'pending'
+
+                case 2:
+                    return 'confirmed'
+
+                case 3:
+                    return 'processing'
+
+                case 4:
+                    return 'shipped'
+
+                case 5:
+                    return 'delivered'
+
+                case 6:
+                    return 'cancelled'
+
+                default:
+                    return ''
+            }
+        }
+
+    const getPaymentStatusClass =
+        (status) => {
+
+            switch (status) {
+
+                case 1:
+                    return 'pending'
+
+                case 2:
+                    return 'success'
+
+                case 3:
+                    return 'failed'
+
+                case 4:
+                    return 'refunded'
+
+                default:
+                    return ''
+            }
+        }
+
+    // ========================================================
+    // SUMMARY COUNTS
+    // ========================================================
+
+    const pendingCount =
+        orders.filter(
+            order =>
+                order.status === 1
+        ).length
+
+    const processingCount =
+        orders.filter(
+            order =>
+                order.status === 3
+        ).length
+
+    const shippedCount =
+        orders.filter(
+            order =>
+                order.status === 4
+        ).length
+
+    const deliveredCount =
+        orders.filter(
+            order =>
+                order.status === 5
+        ).length
+
+    // ========================================================
+    // FILTERING
+    // ========================================================
+
+    const filteredOrders =
+        useMemo(() => {
+
+            const normalizedSearch =
+                search
+                    .trim()
+                    .toLowerCase()
+
+            return orders.filter(
+                order => {
+
+                    const matchesSearch =
+                        !normalizedSearch ||
+                        `
+                            ${order.orderNumber ?? ''}
+                            ${order.id ?? ''}
+                            ${order.userId ?? ''}
+                            ${order.customerName ?? ''}
+                            ${order.customerEmail ?? ''}
+                            ${order.customerPhoneNumber ?? ''}
+                            ${order.shippingAddress ?? ''}
+                            ${getOrderStatusLabel(order.status)}
+                            ${getPaymentStatusLabel(order.paymentStatus)}
+                        `
+                            .toLowerCase()
+                            .includes(
+                                normalizedSearch
+                            )
+
+                    const matchesStatus =
+                        statusFilter === 'all' ||
+                        String(order.status) ===
+                        statusFilter
+
+                    const matchesPayment =
+                        paymentFilter === 'all' ||
+                        String(
+                            order.paymentStatus
+                        ) ===
+                        paymentFilter
+
+                    return (
+                        matchesSearch &&
+                        matchesStatus &&
+                        matchesPayment
+                    )
+                }
+            )
+
+        }, [
+            orders,
+            search,
+            statusFilter,
+            paymentFilter
+        ])
+
+    // ========================================================
     // LOADING
-    // ==========================================================
+    // ========================================================
 
     if (loading) {
-        return (
-            <div>
-                <h1>
-                    Admin Order Management
-                </h1>
 
-                <p>
-                    Loading orders...
-                </p>
-            </div>
+        return (
+
+            <main className="admin-orders-page">
+
+                <div className="admin-orders-container">
+
+                    <div className="admin-orders-loading">
+
+                        <div className="admin-orders-spinner" />
+
+                        <h2>
+                            Loading orders...
+                        </h2>
+
+                    </div>
+
+                </div>
+
+            </main>
         )
     }
 
-    // ==========================================================
+    // ========================================================
     // MAIN UI
-    // ==========================================================
+    // ========================================================
 
     return (
-        <div>
 
-            <h1>
-                Admin Order Management
-            </h1>
+        <main className="admin-orders-page">
 
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
+            <div className="admin-orders-container">
 
-            {message && (
-                <p>
-                    {message}
-                </p>
-            )}
+                {/* ==============================================
+                    HEADER
+                   ============================================== */}
 
-            {orders.length === 0 ? (
+                <header className="admin-orders-header">
 
-                <p>
-                    No orders found.
-                </p>
+                    <div>
 
-            ) : (
+                        <span className="admin-orders-eyebrow">
+                            Order Management
+                        </span>
 
-                orders.map((order) => {
+                        <h1>
+                            Admin Orders
+                        </h1>
 
-                    const isProcessing =
-                        processingOrderId ===
-                        order.id
+                        <p>
+                            Review customer details,
+                            payment status and order progress
+                            before processing each order.
+                        </p>
 
-                    return (
+                    </div>
 
-                        <div key={order.id}>
+                    <div className="admin-orders-count">
 
-                            <h2>
-                                {order.orderNumber}
-                            </h2>
+                        <strong>
+                            {orders.length}
+                        </strong>
 
-                            <p>
-                                <strong>
-                                    Order ID:
-                                </strong>
+                        <span>
+                            Orders
+                        </span>
 
-                                {' '}
+                    </div>
 
-                                {order.id}
-                            </p>
+                </header>
 
-                            <p>
-                                <strong>
-                                    User ID:
-                                </strong>
+                {/* ==============================================
+                    ALERTS
+                   ============================================== */}
 
-                                {' '}
+                {error && (
 
-                                {order.userId}
-                            </p>
+                    <div className="admin-orders-alert error">
 
-                            <p>
-                                <strong>
-                                    Total:
-                                </strong>
+                        <span>
+                            !
+                        </span>
 
-                                {' '}
+                        {error}
 
-                                ₹{Number(
-                                    order.totalAmount
-                                ).toLocaleString(
-                                    'en-IN'
-                                )}
-                            </p>
+                    </div>
 
-                            <p>
-                                <strong>
-                                    Status:
-                                </strong>
+                )}
 
-                                {' '}
+                {message && (
 
-                                {getOrderStatusLabel(
-                                    order.status
-                                )}
-                            </p>
+                    <div className="admin-orders-alert success">
 
-                            <p>
-                                <strong>
-                                    Payment Status:
-                                </strong>
+                        <span>
+                            ✓
+                        </span>
 
-                                {' '}
+                        {message}
 
-                                {getPaymentStatusLabel(
-                                    order.paymentStatus
-                                )}
-                            </p>
+                    </div>
 
-                            <p>
-                                <strong>
-                                    Shipping Address:
-                                </strong>
+                )}
 
-                                {' '}
+                {/* ==============================================
+                    SUMMARY
+                   ============================================== */}
 
-                                {order.shippingAddress}
-                            </p>
+                <section className="admin-order-stats">
 
-                            <p>
-                                <strong>
-                                    Created:
-                                </strong>
+                    <div className="admin-order-stat-card">
 
-                                {' '}
+                        <span>
+                            Total Orders
+                        </span>
 
-                                {new Date(
-                                    order.createdAt
-                                ).toLocaleString()}
-                            </p>
+                        <strong>
+                            {orders.length}
+                        </strong>
 
-                            {/* =================================================
-                  ORDER ITEMS
-                 ================================================= */}
+                    </div>
 
-                            <h3>
-                                Items
-                            </h3>
+                    <div className="admin-order-stat-card warning">
 
-                            {order.orderItems?.map(
-                                (item) => (
+                        <span>
+                            Pending
+                        </span>
 
-                                    <div key={item.id}>
+                        <strong>
+                            {pendingCount}
+                        </strong>
 
-                                        <p>
-                                            {item.productName}
-                                        </p>
+                    </div>
 
-                                        <p>
-                                            Quantity:
-                                            {' '}
-                                            {item.quantity}
-                                        </p>
+                    <div className="admin-order-stat-card info">
 
-                                        <p>
-                                            Price:
-                                            {' '}
-                                            ₹{Number(
-                                                item.unitPrice
-                                            ).toLocaleString(
-                                                'en-IN'
+                        <span>
+                            Processing
+                        </span>
+
+                        <strong>
+                            {processingCount}
+                        </strong>
+
+                    </div>
+
+                    <div className="admin-order-stat-card shipped">
+
+                        <span>
+                            Shipped
+                        </span>
+
+                        <strong>
+                            {shippedCount}
+                        </strong>
+
+                    </div>
+
+                    <div className="admin-order-stat-card success">
+
+                        <span>
+                            Delivered
+                        </span>
+
+                        <strong>
+                            {deliveredCount}
+                        </strong>
+
+                    </div>
+
+                </section>
+
+                {/* ==============================================
+                    FILTERS
+                   ============================================== */}
+
+                <section className="admin-orders-toolbar">
+
+                    <div className="admin-orders-search">
+
+                        <input
+                            type="search"
+                            placeholder="Search customer, email, phone, order number or address..."
+                            value={search}
+                            onChange={
+                                event =>
+                                    setSearch(
+                                        event.target.value
+                                    )
+                            }
+                        />
+
+                        {search && (
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSearch('')
+                                }
+                            >
+                                ×
+                            </button>
+
+                        )}
+
+                    </div>
+
+                    <select
+                        value={statusFilter}
+                        onChange={
+                            event =>
+                                setStatusFilter(
+                                    event.target.value
+                                )
+                        }
+                    >
+
+                        <option value="all">
+                            All Order Status
+                        </option>
+
+                        <option value="1">
+                            Pending
+                        </option>
+
+                        <option value="2">
+                            Confirmed
+                        </option>
+
+                        <option value="3">
+                            Processing
+                        </option>
+
+                        <option value="4">
+                            Shipped
+                        </option>
+
+                        <option value="5">
+                            Delivered
+                        </option>
+
+                        <option value="6">
+                            Cancelled
+                        </option>
+
+                    </select>
+
+                    <select
+                        value={paymentFilter}
+                        onChange={
+                            event =>
+                                setPaymentFilter(
+                                    event.target.value
+                                )
+                        }
+                    >
+
+                        <option value="all">
+                            All Payment Status
+                        </option>
+
+                        <option value="1">
+                            Pending
+                        </option>
+
+                        <option value="2">
+                            Success
+                        </option>
+
+                        <option value="3">
+                            Failed
+                        </option>
+
+                        <option value="4">
+                            Refunded
+                        </option>
+
+                    </select>
+
+                </section>
+
+                <div className="admin-orders-result-count">
+
+                    Showing{' '}
+
+                    <strong>
+                        {filteredOrders.length}
+                    </strong>
+
+                    {' '}of{' '}
+
+                    {orders.length}
+
+                    {' '}orders
+
+                </div>
+
+                {/* ==============================================
+                    ORDER LIST
+                   ============================================== */}
+
+                {filteredOrders.length === 0 ? (
+
+                    <section className="admin-orders-empty">
+
+                        <h2>
+                            No orders found
+                        </h2>
+
+                        <p>
+                            Try changing your search
+                            or filter options.
+                        </p>
+
+                    </section>
+
+                ) : (
+
+                    <section className="admin-orders-list">
+
+                        {filteredOrders.map(
+                            order => {
+
+                                const isProcessing =
+                                    processingOrderId ===
+                                    order.id
+
+                                return (
+
+                                    <article
+                                        className="admin-order-card"
+                                        key={order.id}
+                                    >
+
+                                        {/* ==================================
+                                            ORDER HEADER
+                                           ================================== */}
+
+                                        <div className="admin-order-card-header">
+
+                                            <div>
+
+                                                <span className="admin-order-number-label">
+                                                    Order Number
+                                                </span>
+
+                                                <h2>
+                                                    {order.orderNumber}
+                                                </h2>
+
+                                                <span className="admin-order-date">
+
+                                                    {
+                                                        new Date(
+                                                            order.createdAt
+                                                        ).toLocaleString()
+                                                    }
+
+                                                </span>
+
+                                            </div>
+
+                                            <div className="admin-order-badges">
+
+                                                <span
+                                                    className={
+                                                        `admin-order-status-badge ${getOrderStatusClass(
+                                                            order.status
+                                                        )}`
+                                                    }
+                                                >
+                                                    {
+                                                        getOrderStatusLabel(
+                                                            order.status
+                                                        )
+                                                    }
+                                                </span>
+
+                                                <span
+                                                    className={
+                                                        `admin-payment-status-badge ${getPaymentStatusClass(
+                                                            order.paymentStatus
+                                                        )}`
+                                                    }
+                                                >
+                                                    Payment:{' '}
+                                                    {
+                                                        getPaymentStatusLabel(
+                                                            order.paymentStatus
+                                                        )
+                                                    }
+                                                </span>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            CUSTOMER INFORMATION
+                                           ================================== */}
+
+                                        <div className="admin-order-customer-section">
+
+                                            <div className="admin-order-customer-heading">
+
+                                                <span>
+                                                    Customer
+                                                </span>
+
+                                                <h3>
+                                                    Customer Information
+                                                </h3>
+
+                                            </div>
+
+                                            <div className="admin-order-customer-grid">
+
+                                                <div className="admin-order-customer-detail">
+
+                                                    <span>
+                                                        Name
+                                                    </span>
+
+                                                    <strong>
+                                                        {
+                                                            order.customerName ||
+                                                            'Not available'
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+                                                <div className="admin-order-customer-detail">
+
+                                                    <span>
+                                                        Email
+                                                    </span>
+
+                                                    {
+                                                        order.customerEmail ? (
+
+                                                            <a
+                                                                href={
+                                                                    `mailto:${order.customerEmail}`
+                                                                }
+                                                            >
+                                                                {
+                                                                    order.customerEmail
+                                                                }
+                                                            </a>
+
+                                                        ) : (
+
+                                                            <strong>
+                                                                Not available
+                                                            </strong>
+
+                                                        )
+                                                    }
+
+                                                </div>
+
+                                                <div className="admin-order-customer-detail">
+
+                                                    <span>
+                                                        Phone
+                                                    </span>
+
+                                                    {
+                                                        order.customerPhoneNumber ? (
+
+                                                            <a
+                                                                href={
+                                                                    `tel:${order.customerPhoneNumber}`
+                                                                }
+                                                            >
+                                                                {
+                                                                    order.customerPhoneNumber
+                                                                }
+                                                            </a>
+
+                                                        ) : (
+
+                                                            <strong>
+                                                                Not provided
+                                                            </strong>
+
+                                                        )
+                                                    }
+
+                                                </div>
+
+                                                <div className="admin-order-customer-detail">
+
+                                                    <span>
+                                                        Customer ID
+                                                    </span>
+
+                                                    <strong className="admin-order-code">
+                                                        {order.userId}
+                                                    </strong>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            ORDER DETAILS
+                                           ================================== */}
+
+                                        <div className="admin-order-details-grid">
+
+                                            <div className="admin-order-detail">
+
+                                                <span>
+                                                    Total Amount
+                                                </span>
+
+                                                <strong>
+                                                    ₹{formatPrice(
+                                                        order.totalAmount
+                                                    )}
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="admin-order-detail">
+
+                                                <span>
+                                                    Items
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        order.orderItems
+                                                            ?.length ?? 0
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="admin-order-detail">
+
+                                                <span>
+                                                    Payment
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        getPaymentStatusLabel(
+                                                            order.paymentStatus
+                                                        )
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div className="admin-order-detail">
+
+                                                <span>
+                                                    Order ID
+                                                </span>
+
+                                                <strong className="admin-order-code">
+                                                    {order.id}
+                                                </strong>
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            SHIPPING
+                                           ================================== */}
+
+                                        <div className="admin-order-shipping">
+
+                                            <span>
+                                                Shipping Address
+                                            </span>
+
+                                            <p>
+                                                {
+                                                    order.shippingAddress ||
+                                                    'Shipping address not available.'
+                                                }
+                                            </p>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            ITEMS
+                                           ================================== */}
+
+                                        <div className="admin-order-items-section">
+
+                                            <h3>
+                                                Order Items
+                                            </h3>
+
+                                            <div className="admin-order-items">
+
+                                                {order.orderItems?.map(
+                                                    item => (
+
+                                                        <div
+                                                            className="admin-order-item"
+                                                            key={item.id}
+                                                        >
+
+                                                            <div className="admin-order-item-icon">
+
+                                                                {item.productName
+                                                                    ?.charAt(0)
+                                                                    .toUpperCase()
+                                                                    || 'P'}
+
+                                                            </div>
+
+                                                            <div className="admin-order-item-info">
+
+                                                                <strong>
+                                                                    {
+                                                                        item.productName
+                                                                    }
+                                                                </strong>
+
+                                                                <span>
+                                                                    ₹{formatPrice(
+                                                                        item.unitPrice
+                                                                    )}
+                                                                    {' × '}
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </span>
+
+                                                            </div>
+
+                                                            <strong className="admin-order-item-total">
+
+                                                                ₹{formatPrice(
+                                                                    item.totalPrice
+                                                                )}
+
+                                                            </strong>
+
+                                                        </div>
+
+                                                    )
+                                                )}
+
+                                            </div>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            ACTIONS
+                                           ================================== */}
+
+                                        <div className="admin-order-actions">
+
+                                            {order.status === 1 && (
+
+                                                <button
+                                                    type="button"
+                                                    className="admin-order-action primary"
+                                                    disabled={
+                                                        isProcessing
+                                                    }
+                                                    onClick={() =>
+                                                        handleStatusChange(
+                                                            order.id,
+                                                            confirmOrder,
+                                                            'Order confirmed successfully.'
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        isProcessing
+                                                            ? 'Processing...'
+                                                            : 'Confirm Order'
+                                                    }
+                                                </button>
+
                                             )}
-                                        </p>
 
-                                        <p>
-                                            Subtotal:
-                                            {' '}
-                                            ₹{Number(
-                                                item.totalPrice
-                                            ).toLocaleString(
-                                                'en-IN'
+                                            {order.status === 2 && (
+
+                                                <button
+                                                    type="button"
+                                                    className="admin-order-action primary"
+                                                    disabled={
+                                                        isProcessing
+                                                    }
+                                                    onClick={() =>
+                                                        handleStatusChange(
+                                                            order.id,
+                                                            startProcessingOrder,
+                                                            'Order moved to processing.'
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        isProcessing
+                                                            ? 'Processing...'
+                                                            : 'Start Processing'
+                                                    }
+                                                </button>
+
                                             )}
-                                        </p>
 
-                                    </div>
+                                            {order.status === 3 && (
+
+                                                <button
+                                                    type="button"
+                                                    className="admin-order-action primary"
+                                                    disabled={
+                                                        isProcessing
+                                                    }
+                                                    onClick={() =>
+                                                        handleStatusChange(
+                                                            order.id,
+                                                            shipOrder,
+                                                            'Order shipped successfully.'
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        isProcessing
+                                                            ? 'Processing...'
+                                                            : 'Ship Order'
+                                                    }
+                                                </button>
+
+                                            )}
+
+                                            {order.status === 4 && (
+
+                                                <button
+                                                    type="button"
+                                                    className="admin-order-action success"
+                                                    disabled={
+                                                        isProcessing
+                                                    }
+                                                    onClick={() =>
+                                                        handleStatusChange(
+                                                            order.id,
+                                                            deliverOrder,
+                                                            'Order delivered successfully.'
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        isProcessing
+                                                            ? 'Processing...'
+                                                            : 'Mark Delivered'
+                                                    }
+                                                </button>
+
+                                            )}
+
+                                            {order.status !== 4 &&
+                                                order.status !== 5 &&
+                                                order.status !== 6 && (
+
+                                                    <button
+                                                        type="button"
+                                                        className="admin-order-action danger"
+                                                        disabled={
+                                                            isProcessing
+                                                        }
+                                                        onClick={() =>
+                                                            handleStatusChange(
+                                                                order.id,
+                                                                cancelOrder,
+                                                                'Order cancelled successfully.'
+                                                            )
+                                                        }
+                                                    >
+                                                        Cancel Order
+                                                    </button>
+
+                                                )}
+
+                                            {order.status === 5 && (
+
+                                                <span className="admin-order-complete-message">
+                                                    ✓ Order completed
+                                                </span>
+
+                                            )}
+
+                                            {order.status === 6 && (
+
+                                                <span className="admin-order-cancelled-message">
+                                                    Order cancelled
+                                                </span>
+
+                                            )}
+
+                                        </div>
+
+                                    </article>
 
                                 )
-                            )}
+                            }
+                        )}
 
-                            {/* =================================================
-                  STATUS ACTIONS
-                 ================================================= */}
+                    </section>
 
-                            <div>
+                )}
 
-                                {/* -----------------------------------------------
-                    Pending → Confirm
-                   ----------------------------------------------- */}
+            </div>
 
-                                {order.status === 1 && (
-                                    <button
-                                        type="button"
-                                        disabled={isProcessing}
-                                        onClick={() =>
-                                            handleStatusChange(
-                                                order.id,
-                                                confirmOrder,
-                                                'Order confirmed successfully.'
-                                            )
-                                        }
-                                    >
-                                        Confirm
-                                    </button>
-                                )}
-
-                                {/* -----------------------------------------------
-                    Confirmed → Processing
-                   ----------------------------------------------- */}
-
-                                {order.status === 2 && (
-                                    <button
-                                        type="button"
-                                        disabled={isProcessing}
-                                        onClick={() =>
-                                            handleStatusChange(
-                                                order.id,
-                                                startProcessingOrder,
-                                                'Order moved to processing.'
-                                            )
-                                        }
-                                    >
-                                        Start Processing
-                                    </button>
-                                )}
-
-                                {/* -----------------------------------------------
-                    Processing → Shipped
-                   ----------------------------------------------- */}
-
-                                {order.status === 3 && (
-                                    <button
-                                        type="button"
-                                        disabled={isProcessing}
-                                        onClick={() =>
-                                            handleStatusChange(
-                                                order.id,
-                                                shipOrder,
-                                                'Order shipped successfully.'
-                                            )
-                                        }
-                                    >
-                                        Ship
-                                    </button>
-                                )}
-
-                                {/* -----------------------------------------------
-                    Shipped → Delivered
-                   ----------------------------------------------- */}
-
-                                {order.status === 4 && (
-                                    <button
-                                        type="button"
-                                        disabled={isProcessing}
-                                        onClick={() =>
-                                            handleStatusChange(
-                                                order.id,
-                                                deliverOrder,
-                                                'Order delivered successfully.'
-                                            )
-                                        }
-                                    >
-                                        Deliver
-                                    </button>
-                                )}
-
-                                {/* -----------------------------------------------
-                    Cancel
-
-                    Your backend prevents cancellation after
-                    Shipped or Delivered.
-                   ----------------------------------------------- */}
-
-                                {order.status !== 4 &&
-                                    order.status !== 5 &&
-                                    order.status !== 6 && (
-                                        <>
-                                            {' '}
-
-                                            <button
-                                                type="button"
-                                                disabled={isProcessing}
-                                                onClick={() =>
-                                                    handleStatusChange(
-                                                        order.id,
-                                                        cancelOrder,
-                                                        'Order cancelled successfully.'
-                                                    )
-                                                }
-                                            >
-                                                Cancel
-                                            </button>
-                                        </>
-                                    )}
-
-                            </div>
-
-                            <hr />
-
-                        </div>
-                    )
-                })
-
-            )}
-
-        </div>
+        </main>
     )
 }
 

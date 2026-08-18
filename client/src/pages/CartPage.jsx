@@ -14,86 +14,47 @@ import {
     useNavigate
 } from 'react-router-dom'
 
+import './CartPage.css'
+
 // ============================================================
 // CART PAGE
-// ============================================================
-//
-// Displays the authenticated user's shopping cart.
-//
-// Backend provides:
-// - Product name
-// - Unit price
-// - Quantity
-// - Line total
-// - Complete cart total
-//
-// This page also allows:
-// - Increasing quantity
-// - Decreasing quantity
-// - Removing an item
-// - Clearing the complete cart
 // ============================================================
 
 function CartPage() {
 
-    // ----------------------------------------------------------
-    // CART STATE
-    // ----------------------------------------------------------
-
     const [cart, setCart] =
         useState(null)
-
-    const navigate =
-        useNavigate()
-
-    // ----------------------------------------------------------
-    // LOADING STATE
-    // ----------------------------------------------------------
 
     const [loading, setLoading] =
         useState(true)
 
-    // ----------------------------------------------------------
-    // ERROR STATE
-    // ----------------------------------------------------------
-
     const [error, setError] =
         useState('')
-
-    // ----------------------------------------------------------
-    // UPDATING ITEM STATE
-    // ----------------------------------------------------------
-    //
-    // Stores the ProductId currently being updated.
-    //
-    // This prevents repeated button clicks while the request
-    // is being processed.
-    // ----------------------------------------------------------
 
     const [
         updatingProductId,
         setUpdatingProductId
     ] = useState(null)
 
-    // ==========================================================
+    const [clearing, setClearing] =
+        useState(false)
+
+    const navigate =
+        useNavigate()
+
+    // ========================================================
     // LOAD CART
-    // ==========================================================
+    // ========================================================
 
     const loadCart = async () => {
 
         try {
 
             setLoading(true)
-
             setError('')
 
             const data =
                 await getCart()
-
-            console.log(
-                'Cart received:',
-                data
-            )
 
             setCart(data)
         }
@@ -104,11 +65,10 @@ function CartPage() {
                 err
             )
 
-            const message =
+            setError(
                 err.response?.data?.message ||
                 'Unable to load cart.'
-
-            setError(message)
+            )
         }
         finally {
 
@@ -116,41 +76,15 @@ function CartPage() {
         }
     }
 
-    // ==========================================================
-    // UPDATE PRODUCT QUANTITY
-    // ==========================================================
-    //
-    // Used by both the + and - buttons.
-    //
-    // Example:
-    //
-    // Current quantity = 2
-    //
-    // + button
-    //     ↓
-    // newQuantity = 3
-    //
-    // PUT /api/Cart/items/{productId}
-    //
-    // {
-    //   quantity: 3
-    // }
-    //
-    // The backend returns the updated cart.
-    // ==========================================================
+    // ========================================================
+    // UPDATE QUANTITY
+    // ========================================================
 
     const handleQuantityChange =
         async (
             productId,
             newQuantity
         ) => {
-
-            // ------------------------------------------------------
-            // Quantity cannot go below 1.
-            //
-            // If the user wants quantity 0, they should use
-            // the Remove button instead.
-            // ------------------------------------------------------
 
             if (newQuantity < 1) {
                 return
@@ -170,9 +104,6 @@ function CartPage() {
                         newQuantity
                     )
 
-                // Replace current cart state with the latest
-                // cart returned by the backend.
-
                 setCart(updatedCart)
             }
             catch (err) {
@@ -182,11 +113,10 @@ function CartPage() {
                     err
                 )
 
-                const message =
+                setError(
                     err.response?.data?.message ||
                     'Unable to update quantity.'
-
-                setError(message)
+                )
             }
             finally {
 
@@ -194,9 +124,9 @@ function CartPage() {
             }
         }
 
-    // ==========================================================
+    // ========================================================
     // REMOVE ITEM
-    // ==========================================================
+    // ========================================================
 
     const handleRemove =
         async (productId) => {
@@ -234,9 +164,9 @@ function CartPage() {
             }
         }
 
-    // ==========================================================
+    // ========================================================
     // CLEAR CART
-    // ==========================================================
+    // ========================================================
 
     const handleClear =
         async () => {
@@ -244,6 +174,7 @@ function CartPage() {
             try {
 
                 setError('')
+                setClearing(true)
 
                 const updatedCart =
                     await clearCart()
@@ -262,14 +193,15 @@ function CartPage() {
                     'Unable to clear cart.'
                 )
             }
+            finally {
+
+                setClearing(false)
+            }
         }
 
-    // ==========================================================
-    // LOAD CART WHEN PAGE OPENS
-    // ==========================================================
-    //
-    // [] means this runs once when CartPage first appears.
-    // ==========================================================
+    // ========================================================
+    // LOAD CART
+    // ========================================================
 
     useEffect(() => {
 
@@ -277,269 +209,444 @@ function CartPage() {
 
     }, [])
 
-    // ==========================================================
-    // LOADING UI
-    // ==========================================================
+    // ========================================================
+    // PRICE FORMATTER
+    // ========================================================
+
+    const formatPrice =
+        (price) =>
+            Number(
+                price ?? 0
+            ).toLocaleString(
+                'en-IN',
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            )
+
+    // ========================================================
+    // LOADING
+    // ========================================================
 
     if (loading) {
 
         return (
-            <div>
 
-                <h1>
-                    Shopping Cart
-                </h1>
+            <main className="cart-page">
 
-                <p>
-                    Loading cart...
-                </p>
+                <div className="cart-container">
 
-            </div>
+                    <div className="cart-loading">
+
+                        <div className="cart-spinner" />
+
+                        <h2>
+                            Loading your cart...
+                        </h2>
+
+                    </div>
+
+                </div>
+
+            </main>
         )
     }
-
-    // ----------------------------------------------------------
-    // Safely read cart items.
-    // ----------------------------------------------------------
 
     const items =
         cart?.items ?? []
 
-    // ==========================================================
+    const totalItems =
+        items.reduce(
+            (total, item) =>
+                total + item.quantity,
+            0
+        )
+
+    // ========================================================
     // MAIN UI
-    // ==========================================================
+    // ========================================================
 
     return (
-        <div>
 
-            <h1>
-                Shopping Cart
-            </h1>
+        <main className="cart-page">
 
-            {/* ======================================================
-          ERROR MESSAGE
-         ====================================================== */}
+            <div className="cart-container">
 
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
+                {/* ==============================================
+                    HEADER
+                   ============================================== */}
 
-            {/* ======================================================
-          EMPTY CART
-         ====================================================== */}
+                <header className="cart-header">
 
-            {items.length === 0 ? (
+                    <div>
 
-                <p>
-                    Your cart is empty.
-                </p>
+                        <span className="cart-eyebrow">
+                            Your order
+                        </span>
 
-            ) : (
+                        <h1>
+                            Shopping Cart
+                        </h1>
 
-                <>
+                        <p>
+                            Review your products and quantities
+                            before checkout.
+                        </p>
 
-                    {/* ==================================================
-              CART ITEMS
-             ================================================== */}
+                    </div>
 
-                    {items.map((item) => {
+                    {items.length > 0 && (
 
-                        const isUpdating =
-                            updatingProductId ===
-                            item.productId
+                        <span className="cart-item-count">
+                            {totalItems}
+                            {' '}
+                            {totalItems === 1
+                                ? 'item'
+                                : 'items'}
+                        </span>
 
-                        return (
+                    )}
 
-                            <div key={item.id}>
+                </header>
 
-                                {/* --------------------------------------------
-                    Product Name
-                   -------------------------------------------- */}
+                {/* ==============================================
+                    ERROR
+                   ============================================== */}
 
-                                <h2>
-                                    {item.productName}
-                                </h2>
+                {error && (
 
-                                {/* --------------------------------------------
-                    Unit Price
-                   -------------------------------------------- */}
-
-                                <p>
-
-                                    <strong>
-                                        Unit Price:
-                                    </strong>
-
-                                    {' '}
-
-                                    ₹{Number(
-                                        item.unitPrice
-                                    ).toLocaleString(
-                                        'en-IN'
-                                    )}
-
-                                </p>
-
-                                {/* ============================================
-                    QUANTITY CONTROLS
-                   ============================================ */}
-
-                                <div>
-
-                                    <strong>
-                                        Quantity:
-                                    </strong>
-
-                                    {' '}
-
-                                    {/* ------------------------------------------
-                      DECREASE QUANTITY
-                     ------------------------------------------ */}
-
-                                    <button
-                                        type="button"
-
-                                        disabled={
-                                            item.quantity <= 1 ||
-                                            isUpdating
-                                        }
-
-                                        onClick={() =>
-                                            handleQuantityChange(
-                                                item.productId,
-                                                item.quantity - 1
-                                            )
-                                        }
-                                    >
-                                        -
-                                    </button>
-
-                                    {' '}
-
-                                    <span>
-                                        {item.quantity}
-                                    </span>
-
-                                    {' '}
-
-                                    {/* ------------------------------------------
-                      INCREASE QUANTITY
-                     ------------------------------------------ */}
-
-                                    <button
-                                        type="button"
-
-                                        disabled={
-                                            isUpdating
-                                        }
-
-                                        onClick={() =>
-                                            handleQuantityChange(
-                                                item.productId,
-                                                item.quantity + 1
-                                            )
-                                        }
-                                    >
-                                        +
-                                    </button>
-
-                                </div>
-
-                                {/* --------------------------------------------
-                    Subtotal
-                   -------------------------------------------- */}
-
-                                <p>
-
-                                    <strong>
-                                        Subtotal:
-                                    </strong>
-
-                                    {' '}
-
-                                    ₹{Number(
-                                        item.totalPrice
-                                    ).toLocaleString(
-                                        'en-IN'
-                                    )}
-
-                                </p>
-
-                                {/* --------------------------------------------
-                    Remove Product
-                   -------------------------------------------- */}
-
-                                <button
-                                    type="button"
-
-                                    disabled={
-                                        isUpdating
-                                    }
-
-                                    onClick={() =>
-                                        handleRemove(
-                                            item.productId
-                                        )
-                                    }
-                                >
-                                    {isUpdating
-                                        ? 'Updating...'
-                                        : 'Remove'}
-                                </button>
-
-                                <hr />
-
-                            </div>
-                        )
-                    })}
-
-                    {/* ==================================================
-              CART TOTAL
-             ================================================== */}
-
-                    <h2>
-
-                        Total:
-
-                        {' '}
-
-                        ₹{Number(
-                            cart?.totalAmount ?? 0
-                        ).toLocaleString(
-                            'en-IN'
-                        )}
-
-                    </h2>
-
-                    {/* ==================================================
-              CART ACTIONS
-             ================================================== */}
-
-                    <button
-                        type="button"
-                        onClick={handleClear}
+                    <div
+                        className="cart-alert"
+                        role="alert"
                     >
-                        Clear Cart
-                        </button>
+                        {error}
+                    </div>
 
-                        {' '}
+                )}
+
+                {/* ==============================================
+                    EMPTY CART
+                   ============================================== */}
+
+                {items.length === 0 ? (
+
+                    <section className="empty-cart">
+
+                        <div className="empty-cart-icon">
+                            🛒
+                        </div>
+
+                        <h2>
+                            Your cart is empty
+                        </h2>
+
+                        <p>
+                            You haven't added any products
+                            to your cart yet.
+                        </p>
 
                         <button
                             type="button"
+                            className="continue-shopping-button"
                             onClick={() =>
-                                navigate('/checkout')
+                                navigate('/products')
                             }
                         >
-                            Proceed to Checkout
+                            Browse Products
                         </button>
 
-                </>
+                    </section>
 
-            )}
+                ) : (
 
-        </div>
+                    <div className="cart-layout">
+
+                        {/* ======================================
+                            ITEMS
+                           ====================================== */}
+
+                        <section className="cart-items-section">
+
+                            <div className="cart-section-heading">
+
+                                <h2>
+                                    Cart Items
+                                </h2>
+
+                                <span>
+                                    {items.length}
+                                    {' '}
+                                    {items.length === 1
+                                        ? 'product'
+                                        : 'products'}
+                                </span>
+
+                            </div>
+
+                            <div className="cart-items-list">
+
+                                {items.map((item) => {
+
+                                    const isUpdating =
+                                        updatingProductId ===
+                                        item.productId
+
+                                    return (
+
+                                        <article
+                                            className="cart-item"
+                                            key={item.id}
+                                        >
+
+                                            {/* ==================
+                                                PRODUCT ICON
+                                               ================== */}
+
+                                            <div className="cart-product-icon">
+
+                                                {item.productName
+                                                    ?.charAt(0)
+                                                    .toUpperCase()
+                                                    || 'P'}
+
+                                            </div>
+
+                                            {/* ==================
+                                                INFORMATION
+                                               ================== */}
+
+                                            <div className="cart-product-info">
+
+                                                <span className="cart-product-label">
+                                                    Product
+                                                </span>
+
+                                                <h3>
+                                                    {item.productName}
+                                                </h3>
+
+                                                <div className="cart-unit-price">
+
+                                                    <span>
+                                                        Unit Price
+                                                    </span>
+
+                                                    <strong>
+                                                        ₹{formatPrice(
+                                                            item.unitPrice
+                                                        )}
+                                                    </strong>
+
+                                                </div>
+
+                                            </div>
+
+                                            {/* ==================
+                                                QUANTITY
+                                               ================== */}
+
+                                            <div className="cart-quantity-area">
+
+                                                <span className="cart-control-label">
+                                                    Quantity
+                                                </span>
+
+                                                <div className="quantity-control">
+
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Decrease quantity"
+                                                        disabled={
+                                                            item.quantity <= 1 ||
+                                                            isUpdating
+                                                        }
+                                                        onClick={() =>
+                                                            handleQuantityChange(
+                                                                item.productId,
+                                                                item.quantity - 1
+                                                            )
+                                                        }
+                                                    >
+                                                        −
+                                                    </button>
+
+                                                    <span>
+                                                        {isUpdating
+                                                            ? '...'
+                                                            : item.quantity}
+                                                    </span>
+
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Increase quantity"
+                                                        disabled={
+                                                            isUpdating
+                                                        }
+                                                        onClick={() =>
+                                                            handleQuantityChange(
+                                                                item.productId,
+                                                                item.quantity + 1
+                                                            )
+                                                        }
+                                                    >
+                                                        +
+                                                    </button>
+
+                                                </div>
+
+                                            </div>
+
+                                            {/* ==================
+                                                SUBTOTAL
+                                               ================== */}
+
+                                            <div className="cart-subtotal">
+
+                                                <span>
+                                                    Subtotal
+                                                </span>
+
+                                                <strong>
+                                                    ₹{formatPrice(
+                                                        item.totalPrice
+                                                    )}
+                                                </strong>
+
+                                            </div>
+
+                                            {/* ==================
+                                                REMOVE
+                                               ================== */}
+
+                                            <button
+                                                type="button"
+                                                className="cart-remove-button"
+                                                disabled={
+                                                    isUpdating
+                                                }
+                                                onClick={() =>
+                                                    handleRemove(
+                                                        item.productId
+                                                    )
+                                                }
+                                            >
+                                                {isUpdating
+                                                    ? 'Please wait...'
+                                                    : 'Remove'}
+                                            </button>
+
+                                        </article>
+                                    )
+                                })}
+
+                            </div>
+
+                            <button
+                                type="button"
+                                className="continue-shopping-link"
+                                onClick={() =>
+                                    navigate('/products')
+                                }
+                            >
+                                ← Continue Shopping
+                            </button>
+
+                        </section>
+
+                        {/* ======================================
+                            ORDER SUMMARY
+                           ====================================== */}
+
+                        <aside className="cart-summary">
+
+                            <div className="summary-heading">
+
+                                <span>
+                                    Order Summary
+                                </span>
+
+                                <h2>
+                                    Cart Total
+                                </h2>
+
+                            </div>
+
+                            <div className="summary-row">
+
+                                <span>
+                                    Products
+                                </span>
+
+                                <strong>
+                                    {items.length}
+                                </strong>
+
+                            </div>
+
+                            <div className="summary-row">
+
+                                <span>
+                                    Total Quantity
+                                </span>
+
+                                <strong>
+                                    {totalItems}
+                                </strong>
+
+                            </div>
+
+                            <div className="summary-divider" />
+
+                            <div className="summary-total">
+
+                                <span>
+                                    Total
+                                </span>
+
+                                <strong>
+                                    ₹{formatPrice(
+                                        cart?.totalAmount
+                                    )}
+                                </strong>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                className="checkout-button"
+                                onClick={() =>
+                                    navigate('/checkout')
+                                }
+                            >
+                                Proceed to Checkout
+                            </button>
+
+                            <button
+                                type="button"
+                                className="clear-cart-button"
+                                disabled={clearing}
+                                onClick={handleClear}
+                            >
+                                {clearing
+                                    ? 'Clearing...'
+                                    : 'Clear Cart'}
+                            </button>
+
+                            <p className="summary-note">
+                                Final order details will be
+                                confirmed during checkout.
+                            </p>
+
+                        </aside>
+
+                    </div>
+
+                )}
+
+            </div>
+
+        </main>
     )
 }
 

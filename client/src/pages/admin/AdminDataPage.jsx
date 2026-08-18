@@ -12,19 +12,21 @@ import {
     getAllCategoriesForAdmin
 } from '../../services/categoryService'
 
+import './AdminDataPage.css'
+
 // ============================================================
-// ADMIN DATA PAGE
+// ADMIN DATA / ARCHIVE PAGE
 // ============================================================
 //
 // Displays:
-// 1. Categories table
-// 2. Products table
 //
-// Each section has a simple Ctrl+F-style search.
+// 1. Categories
+// 2. Products
 //
-// IMPORTANT:
-// Categories and Products are loaded independently.
-// If one API fails, the other table can still work.
+// Includes active and inactive records.
+//
+// Categories and products are loaded independently so that
+// one section can still work if the other API fails.
 // ============================================================
 
 function AdminDataPage() {
@@ -43,31 +45,57 @@ function AdminDataPage() {
     // SEARCH
     // ========================================================
 
-    const [categorySearch, setCategorySearch] =
-        useState('')
+    const [
+        categorySearch,
+        setCategorySearch
+    ] = useState('')
 
-    const [productSearch, setProductSearch] =
-        useState('')
+    const [
+        productSearch,
+        setProductSearch
+    ] = useState('')
+
+    // ========================================================
+    // STATUS FILTER
+    // ========================================================
+
+    const [
+        categoryStatus,
+        setCategoryStatus
+    ] = useState('all')
+
+    const [
+        productStatus,
+        setProductStatus
+    ] = useState('all')
 
     // ========================================================
     // LOADING
     // ========================================================
 
-    const [categoriesLoading, setCategoriesLoading] =
-        useState(true)
+    const [
+        categoriesLoading,
+        setCategoriesLoading
+    ] = useState(true)
 
-    const [productsLoading, setProductsLoading] =
-        useState(true)
+    const [
+        productsLoading,
+        setProductsLoading
+    ] = useState(true)
 
     // ========================================================
     // ERRORS
     // ========================================================
 
-    const [categoryError, setCategoryError] =
-        useState('')
+    const [
+        categoryError,
+        setCategoryError
+    ] = useState('')
 
-    const [productError, setProductError] =
-        useState('')
+    const [
+        productError,
+        setProductError
+    ] = useState('')
 
     // ========================================================
     // LOAD CATEGORIES
@@ -78,6 +106,7 @@ function AdminDataPage() {
         try {
 
             setCategoriesLoading(true)
+
             setCategoryError('')
 
             const data =
@@ -134,6 +163,7 @@ function AdminDataPage() {
         try {
 
             setProductsLoading(true)
+
             setProductError('')
 
             const data =
@@ -197,20 +227,51 @@ function AdminDataPage() {
     // GET CATEGORY NAME
     // ========================================================
 
-    const getCategoryName = (categoryId) => {
+    const getCategoryName =
+        (categoryId) => {
 
-        const category =
-            categories.find(
-                category =>
-                    category.id === categoryId
+            const category =
+                categories.find(
+                    item =>
+                        item.id === categoryId
+                )
+
+            return (
+                category?.name ||
+                'Unknown Category'
             )
-
-        return category?.name ||
-            'Unknown Category'
-    }
+        }
 
     // ========================================================
-    // CATEGORY SEARCH
+    // COUNTS
+    // ========================================================
+
+    const activeCategoriesCount =
+        categories.filter(
+            category =>
+                category.isActive
+        ).length
+
+    const inactiveCategoriesCount =
+        categories.filter(
+            category =>
+                !category.isActive
+        ).length
+
+    const activeProductsCount =
+        products.filter(
+            product =>
+                product.isActive
+        ).length
+
+    const inactiveProductsCount =
+        products.filter(
+            product =>
+                !product.isActive
+        ).length
+
+    // ========================================================
+    // CATEGORY SEARCH + FILTER
     // ========================================================
 
     const filteredCategories =
@@ -220,10 +281,6 @@ function AdminDataPage() {
                 categorySearch
                     .trim()
                     .toLowerCase()
-
-            if (!search) {
-                return categories
-            }
 
             return categories.filter(
                 category => {
@@ -238,19 +295,48 @@ function AdminDataPage() {
                         }
                     `.toLowerCase()
 
-                    return searchableText.includes(
-                        search
+                    const matchesSearch =
+                        !search ||
+                        searchableText.includes(
+                            search
+                        )
+
+                    let matchesStatus =
+                        true
+
+                    if (
+                        categoryStatus ===
+                        'active'
+                    ) {
+                        matchesStatus =
+                            category.isActive ===
+                            true
+                    }
+
+                    if (
+                        categoryStatus ===
+                        'inactive'
+                    ) {
+                        matchesStatus =
+                            category.isActive ===
+                            false
+                    }
+
+                    return (
+                        matchesSearch &&
+                        matchesStatus
                     )
                 }
             )
 
         }, [
             categories,
-            categorySearch
+            categorySearch,
+            categoryStatus
         ])
 
     // ========================================================
-    // PRODUCT SEARCH
+    // PRODUCT SEARCH + FILTER
     // ========================================================
 
     const filteredProducts =
@@ -260,10 +346,6 @@ function AdminDataPage() {
                 productSearch
                     .trim()
                     .toLowerCase()
-
-            if (!search) {
-                return products
-            }
 
             return products.filter(
                 product => {
@@ -287,8 +369,36 @@ function AdminDataPage() {
                         }
                     `.toLowerCase()
 
-                    return searchableText.includes(
-                        search
+                    const matchesSearch =
+                        !search ||
+                        searchableText.includes(
+                            search
+                        )
+
+                    let matchesStatus =
+                        true
+
+                    if (
+                        productStatus ===
+                        'active'
+                    ) {
+                        matchesStatus =
+                            product.isActive ===
+                            true
+                    }
+
+                    if (
+                        productStatus ===
+                        'inactive'
+                    ) {
+                        matchesStatus =
+                            product.isActive ===
+                            false
+                    }
+
+                    return (
+                        matchesSearch &&
+                        matchesStatus
                     )
                 }
             )
@@ -296,390 +406,932 @@ function AdminDataPage() {
         }, [
             products,
             categories,
-            productSearch
+            productSearch,
+            productStatus
         ])
+
+    // ========================================================
+    // COPY VALUE
+    // ========================================================
+
+    const copyValue = async (value) => {
+
+        try {
+
+            await navigator.clipboard.writeText(
+                String(value)
+            )
+        }
+        catch (error) {
+
+            console.error(
+                'Unable to copy value:',
+                error
+            )
+        }
+    }
+
+    // ========================================================
+    // UI
+    // ========================================================
 
     return (
 
-        <div>
+        <main className="admin-data-page">
 
-            <h1>
-                Admin Data / Archive
-            </h1>
+            <div className="admin-data-container">
 
-            <p>
-                View active and inactive categories
-                and products.
-            </p>
+                {/* ==============================================
+                    PAGE HEADER
+                   ============================================== */}
 
-            {/* ==================================================
-                CATEGORY SECTION
-               ================================================== */}
-
-            <section>
-
-                <h2>
-                    Categories
-                </h2>
-
-                {/* Ctrl+F style search */}
-
-                <input
-                    type="search"
-                    placeholder="Search categories..."
-                    value={categorySearch}
-                    onChange={
-                        event =>
-                            setCategorySearch(
-                                event.target.value
-                            )
-                    }
-                />
-
-                {' '}
-
-                {categorySearch && (
-                    <button
-                        type="button"
-                        onClick={
-                            () =>
-                                setCategorySearch('')
-                        }
-                    >
-                        Clear
-                    </button>
-                )}
-
-                <p>
-                    Showing{' '}
-                    <strong>
-                        {filteredCategories.length}
-                    </strong>
-                    {' '}of{' '}
-                    <strong>
-                        {categories.length}
-                    </strong>
-                    {' '}categories
-                </p>
-
-                {categoryError && (
+                <header className="admin-data-header">
 
                     <div>
 
-                        <p>
-                            {categoryError}
-                        </p>
+                        <span className="admin-data-eyebrow">
+                            Database Viewer
+                        </span>
 
-                        <button
-                            type="button"
-                            onClick={loadCategories}
-                        >
-                            Retry
-                        </button>
+                        <h1>
+                            Admin Data / Archive
+                        </h1>
+
+                        <p>
+                            View and search active and inactive
+                            category and product records.
+                        </p>
 
                     </div>
 
-                )}
+                    <div className="admin-data-record-count">
 
-                {categoriesLoading ? (
+                        <strong>
+                            {
+                                categories.length +
+                                products.length
+                            }
+                        </strong>
 
-                    <p>
-                        Loading categories...
-                    </p>
-
-                ) : filteredCategories.length === 0 ? (
-
-                    <p>
-                        No categories found.
-                    </p>
-
-                ) : (
-
-                    <table
-                        border="1"
-                        cellPadding="8"
-                        cellSpacing="0"
-                    >
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    Name
-                                </th>
-
-                                <th>
-                                    Description
-                                </th>
-
-                                <th>
-                                    Category ID
-                                </th>
-
-                                <th>
-                                    Status
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody>
-
-                            {filteredCategories.map(
-                                category => (
-
-                                    <tr
-                                        key={category.id}
-                                    >
-
-                                        <td>
-                                            {category.name}
-                                        </td>
-
-                                        <td>
-                                            {
-                                                category.description ||
-                                                'No description'
-                                            }
-                                        </td>
-
-                                        <td>
-                                            {category.id}
-                                        </td>
-
-                                        <td>
-
-                                            <strong>
-                                                {
-                                                    category.isActive
-                                                        ? 'Active'
-                                                        : 'Inactive'
-                                                }
-                                            </strong>
-
-                                        </td>
-
-                                    </tr>
-
-                                )
-                            )}
-
-                        </tbody>
-
-                    </table>
-
-                )}
-
-            </section>
-
-            <br />
-
-            <hr />
-
-            <br />
-
-            {/* ==================================================
-                PRODUCT SECTION
-               ================================================== */}
-
-            <section>
-
-                <h2>
-                    Products
-                </h2>
-
-                {/* Ctrl+F style search */}
-
-                <input
-                    type="search"
-                    placeholder="Search products..."
-                    value={productSearch}
-                    onChange={
-                        event =>
-                            setProductSearch(
-                                event.target.value
-                            )
-                    }
-                />
-
-                {' '}
-
-                {productSearch && (
-
-                    <button
-                        type="button"
-                        onClick={
-                            () =>
-                                setProductSearch('')
-                        }
-                    >
-                        Clear
-                    </button>
-
-                )}
-
-                <p>
-                    Showing{' '}
-                    <strong>
-                        {filteredProducts.length}
-                    </strong>
-                    {' '}of{' '}
-                    <strong>
-                        {products.length}
-                    </strong>
-                    {' '}products
-                </p>
-
-                {productError && (
-
-                    <div>
-
-                        <p>
-                            {productError}
-                        </p>
-
-                        <button
-                            type="button"
-                            onClick={loadProducts}
-                        >
-                            Retry
-                        </button>
+                        <span>
+                            Total Records
+                        </span>
 
                     </div>
 
-                )}
+                </header>
 
-                {productsLoading ? (
+                {/* ==============================================
+                    SUMMARY CARDS
+                   ============================================== */}
 
-                    <p>
-                        Loading products...
-                    </p>
+                <section className="admin-data-summary">
 
-                ) : filteredProducts.length === 0 ? (
+                    <article className="admin-data-summary-card">
 
-                    <p>
-                        No products found.
-                    </p>
+                        <span>
+                            Categories
+                        </span>
 
-                ) : (
+                        <strong>
+                            {categories.length}
+                        </strong>
 
-                    <table
-                        border="1"
-                        cellPadding="8"
-                        cellSpacing="0"
-                    >
+                        <small>
+                            Total category records
+                        </small>
 
-                        <thead>
+                    </article>
 
-                            <tr>
+                    <article className="admin-data-summary-card active">
 
-                                <th>
-                                    Name
-                                </th>
+                        <span>
+                            Active Categories
+                        </span>
 
-                                <th>
-                                    SKU
-                                </th>
+                        <strong>
+                            {activeCategoriesCount}
+                        </strong>
 
-                                <th>
-                                    Category
-                                </th>
+                        <small>
+                            Currently available
+                        </small>
 
-                                <th>
-                                    Category ID
-                                </th>
+                    </article>
 
-                                <th>
-                                    Price
-                                </th>
+                    <article className="admin-data-summary-card inactive">
 
-                                <th>
-                                    Stock
-                                </th>
+                        <span>
+                            Inactive Categories
+                        </span>
 
-                                <th>
-                                    Status
-                                </th>
+                        <strong>
+                            {inactiveCategoriesCount}
+                        </strong>
 
-                            </tr>
+                        <small>
+                            Archived records
+                        </small>
 
-                        </thead>
+                    </article>
 
-                        <tbody>
+                    <article className="admin-data-summary-card">
 
-                            {filteredProducts.map(
-                                product => (
+                        <span>
+                            Products
+                        </span>
 
-                                    <tr
-                                        key={product.id}
-                                    >
+                        <strong>
+                            {products.length}
+                        </strong>
 
-                                        <td>
-                                            {product.name}
-                                        </td>
+                        <small>
+                            Total product records
+                        </small>
 
-                                        <td>
-                                            <strong>
-                                                {product.sku}
-                                            </strong>
-                                        </td>
+                    </article>
 
-                                        <td>
-                                            {
-                                                getCategoryName(
-                                                    product.categoryId
-                                                )
-                                            }
-                                        </td>
+                    <article className="admin-data-summary-card active">
 
-                                        <td>
-                                            {product.categoryId}
-                                        </td>
+                        <span>
+                            Active Products
+                        </span>
 
-                                        <td>
-                                            ₹{
-                                                Number(
-                                                    product.price
-                                                ).toLocaleString(
-                                                    'en-IN'
-                                                )
-                                            }
-                                        </td>
+                        <strong>
+                            {activeProductsCount}
+                        </strong>
 
-                                        <td>
-                                            {
-                                                product.stockQuantity
-                                            }
-                                        </td>
+                        <small>
+                            Currently available
+                        </small>
 
-                                        <td>
+                    </article>
 
-                                            <strong>
-                                                {
-                                                    product.isActive
-                                                        ? 'Active'
-                                                        : 'Inactive'
-                                                }
-                                            </strong>
+                    <article className="admin-data-summary-card inactive">
 
-                                        </td>
+                        <span>
+                            Inactive Products
+                        </span>
+
+                        <strong>
+                            {inactiveProductsCount}
+                        </strong>
+
+                        <small>
+                            Archived records
+                        </small>
+
+                    </article>
+
+                </section>
+
+                {/* ==============================================
+                    CATEGORY SECTION
+                   ============================================== */}
+
+                <section className="admin-data-section">
+
+                    <div className="admin-data-section-header">
+
+                        <div>
+
+                            <span className="admin-data-section-label">
+                                Section 01
+                            </span>
+
+                            <h2>
+                                Categories
+                            </h2>
+
+                            <p>
+                                Search category names,
+                                descriptions, IDs and status.
+                            </p>
+
+                        </div>
+
+                        <span className="admin-data-showing">
+
+                            Showing{' '}
+
+                            <strong>
+                                {
+                                    filteredCategories.length
+                                }
+                            </strong>
+
+                            {' '}of{' '}
+
+                            {categories.length}
+
+                        </span>
+
+                    </div>
+
+                    {/* ==========================================
+                        CATEGORY TOOLBAR
+                       ========================================== */}
+
+                    <div className="admin-data-toolbar">
+
+                        <div className="admin-data-search">
+
+                            <span className="admin-data-search-icon">
+                                ⌕
+                            </span>
+
+                            <input
+                                type="search"
+                                placeholder="Search categories..."
+                                value={categorySearch}
+                                onChange={
+                                    event =>
+                                        setCategorySearch(
+                                            event.target.value
+                                        )
+                                }
+                            />
+
+                            {categorySearch && (
+
+                                <button
+                                    type="button"
+                                    title="Clear search"
+                                    onClick={() =>
+                                        setCategorySearch('')
+                                    }
+                                >
+                                    ×
+                                </button>
+
+                            )}
+
+                        </div>
+
+                        <select
+                            value={categoryStatus}
+                            onChange={
+                                event =>
+                                    setCategoryStatus(
+                                        event.target.value
+                                    )
+                            }
+                        >
+
+                            <option value="all">
+                                All Status
+                            </option>
+
+                            <option value="active">
+                                Active
+                            </option>
+
+                            <option value="inactive">
+                                Inactive
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    {/* ==========================================
+                        CATEGORY ERROR
+                       ========================================== */}
+
+                    {categoryError && (
+
+                        <div className="admin-data-error">
+
+                            <div>
+
+                                <strong>
+                                    Unable to load categories
+                                </strong>
+
+                                <span>
+                                    {categoryError}
+                                </span>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={loadCategories}
+                            >
+                                Retry
+                            </button>
+
+                        </div>
+
+                    )}
+
+                    {/* ==========================================
+                        CATEGORY CONTENT
+                       ========================================== */}
+
+                    {categoriesLoading ? (
+
+                        <div className="admin-data-loading">
+
+                            <div className="admin-data-spinner" />
+
+                            <span>
+                                Loading categories...
+                            </span>
+
+                        </div>
+
+                    ) : filteredCategories.length === 0 ? (
+
+                        <div className="admin-data-empty">
+
+                            <h3>
+                                No categories found
+                            </h3>
+
+                            <p>
+                                Try changing your search
+                                or status filter.
+                            </p>
+
+                        </div>
+
+                    ) : (
+
+                        <div className="admin-data-table-wrapper">
+
+                            <table className="admin-data-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Name
+                                        </th>
+
+                                        <th>
+                                            Description
+                                        </th>
+
+                                        <th>
+                                            Category ID
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
 
                                     </tr>
 
-                                )
+                                </thead>
+
+                                <tbody>
+
+                                    {
+                                        filteredCategories.map(
+                                            category => (
+
+                                                <tr
+                                                    key={
+                                                        category.id
+                                                    }
+                                                >
+
+                                                    <td
+                                                        data-label="Name"
+                                                    >
+
+                                                        <div className="admin-data-name">
+
+                                                            <div className="admin-data-avatar category">
+
+                                                                {
+                                                                    category.name
+                                                                        ?.charAt(0)
+                                                                        .toUpperCase() ||
+                                                                    'C'
+                                                                }
+
+                                                            </div>
+
+                                                            <strong>
+                                                                {
+                                                                    category.name
+                                                                }
+                                                            </strong>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Description"
+                                                    >
+
+                                                        <span className="admin-data-description">
+
+                                                            {
+                                                                category.description ||
+                                                                'No description'
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Category ID"
+                                                    >
+
+                                                        <div className="admin-data-id">
+
+                                                            <code>
+                                                                {
+                                                                    category.id
+                                                                }
+                                                            </code>
+
+                                                            <button
+                                                                type="button"
+                                                                title="Copy Category ID"
+                                                                onClick={() =>
+                                                                    copyValue(
+                                                                        category.id
+                                                                    )
+                                                                }
+                                                            >
+                                                                Copy
+                                                            </button>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Status"
+                                                    >
+
+                                                        <span
+                                                            className={
+                                                                `admin-data-status ${category.isActive
+                                                                    ? 'active'
+                                                                    : 'inactive'
+                                                                }`
+                                                            }
+                                                        >
+
+                                                            <span />
+
+                                                            {
+                                                                category.isActive
+                                                                    ? 'Active'
+                                                                    : 'Inactive'
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                </tr>
+
+                                            )
+                                        )
+                                    }
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    )}
+
+                </section>
+
+                {/* ==============================================
+                    PRODUCT SECTION
+                   ============================================== */}
+
+                <section className="admin-data-section">
+
+                    <div className="admin-data-section-header">
+
+                        <div>
+
+                            <span className="admin-data-section-label">
+                                Section 02
+                            </span>
+
+                            <h2>
+                                Products
+                            </h2>
+
+                            <p>
+                                Search products by name,
+                                SKU, category, ID, price,
+                                stock or status.
+                            </p>
+
+                        </div>
+
+                        <span className="admin-data-showing">
+
+                            Showing{' '}
+
+                            <strong>
+                                {
+                                    filteredProducts.length
+                                }
+                            </strong>
+
+                            {' '}of{' '}
+
+                            {products.length}
+
+                        </span>
+
+                    </div>
+
+                    {/* ==========================================
+                        PRODUCT TOOLBAR
+                       ========================================== */}
+
+                    <div className="admin-data-toolbar">
+
+                        <div className="admin-data-search">
+
+                            <span className="admin-data-search-icon">
+                                ⌕
+                            </span>
+
+                            <input
+                                type="search"
+                                placeholder="Search name, SKU, category..."
+                                value={productSearch}
+                                onChange={
+                                    event =>
+                                        setProductSearch(
+                                            event.target.value
+                                        )
+                                }
+                            />
+
+                            {productSearch && (
+
+                                <button
+                                    type="button"
+                                    title="Clear search"
+                                    onClick={() =>
+                                        setProductSearch('')
+                                    }
+                                >
+                                    ×
+                                </button>
+
                             )}
 
-                        </tbody>
+                        </div>
 
-                    </table>
+                        <select
+                            value={productStatus}
+                            onChange={
+                                event =>
+                                    setProductStatus(
+                                        event.target.value
+                                    )
+                            }
+                        >
 
-                )}
+                            <option value="all">
+                                All Status
+                            </option>
 
-            </section>
+                            <option value="active">
+                                Active
+                            </option>
 
-        </div>
+                            <option value="inactive">
+                                Inactive
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    {/* ==========================================
+                        PRODUCT ERROR
+                       ========================================== */}
+
+                    {productError && (
+
+                        <div className="admin-data-error">
+
+                            <div>
+
+                                <strong>
+                                    Unable to load products
+                                </strong>
+
+                                <span>
+                                    {productError}
+                                </span>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={loadProducts}
+                            >
+                                Retry
+                            </button>
+
+                        </div>
+
+                    )}
+
+                    {/* ==========================================
+                        PRODUCT CONTENT
+                       ========================================== */}
+
+                    {productsLoading ? (
+
+                        <div className="admin-data-loading">
+
+                            <div className="admin-data-spinner" />
+
+                            <span>
+                                Loading products...
+                            </span>
+
+                        </div>
+
+                    ) : filteredProducts.length === 0 ? (
+
+                        <div className="admin-data-empty">
+
+                            <h3>
+                                No products found
+                            </h3>
+
+                            <p>
+                                Try changing your search
+                                or status filter.
+                            </p>
+
+                        </div>
+
+                    ) : (
+
+                        <div className="admin-data-table-wrapper">
+
+                            <table className="admin-data-table product-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Product
+                                        </th>
+
+                                        <th>
+                                            SKU
+                                        </th>
+
+                                        <th>
+                                            Category
+                                        </th>
+
+                                        <th>
+                                            Category ID
+                                        </th>
+
+                                        <th>
+                                            Price
+                                        </th>
+
+                                        <th>
+                                            Stock
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {
+                                        filteredProducts.map(
+                                            product => (
+
+                                                <tr
+                                                    key={
+                                                        product.id
+                                                    }
+                                                >
+
+                                                    <td
+                                                        data-label="Product"
+                                                    >
+
+                                                        <div className="admin-data-name">
+
+                                                            <div className="admin-data-avatar product">
+
+                                                                {
+                                                                    product.name
+                                                                        ?.charAt(0)
+                                                                        .toUpperCase() ||
+                                                                    'P'
+                                                                }
+
+                                                            </div>
+
+                                                            <div>
+
+                                                                <strong>
+                                                                    {
+                                                                        product.name
+                                                                    }
+                                                                </strong>
+
+                                                                <span className="admin-data-product-description">
+
+                                                                    {
+                                                                        product.description ||
+                                                                        'No description'
+                                                                    }
+
+                                                                </span>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="SKU"
+                                                    >
+
+                                                        <div className="admin-data-sku">
+
+                                                            <code>
+                                                                {
+                                                                    product.sku
+                                                                }
+                                                            </code>
+
+                                                            <button
+                                                                type="button"
+                                                                title="Copy SKU"
+                                                                onClick={() =>
+                                                                    copyValue(
+                                                                        product.sku
+                                                                    )
+                                                                }
+                                                            >
+                                                                Copy
+                                                            </button>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Category"
+                                                    >
+
+                                                        <span className="admin-data-category-pill">
+
+                                                            {
+                                                                getCategoryName(
+                                                                    product.categoryId
+                                                                )
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Category ID"
+                                                    >
+
+                                                        <div className="admin-data-id">
+
+                                                            <code>
+                                                                {
+                                                                    product.categoryId
+                                                                }
+                                                            </code>
+
+                                                            <button
+                                                                type="button"
+                                                                title="Copy Category ID"
+                                                                onClick={() =>
+                                                                    copyValue(
+                                                                        product.categoryId
+                                                                    )
+                                                                }
+                                                            >
+                                                                Copy
+                                                            </button>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Price"
+                                                    >
+
+                                                        <strong className="admin-data-price">
+
+                                                            ₹{
+                                                                Number(
+                                                                    product.price
+                                                                ).toLocaleString(
+                                                                    'en-IN'
+                                                                )
+                                                            }
+
+                                                        </strong>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Stock"
+                                                    >
+
+                                                        <span
+                                                            className={
+                                                                `admin-data-stock ${product.stockQuantity === 0
+                                                                    ? 'empty'
+                                                                    : product.stockQuantity <= 5
+                                                                        ? 'low'
+                                                                        : ''
+                                                                }`
+                                                            }
+                                                        >
+
+                                                            {
+                                                                product.stockQuantity
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Status"
+                                                    >
+
+                                                        <span
+                                                            className={
+                                                                `admin-data-status ${product.isActive
+                                                                    ? 'active'
+                                                                    : 'inactive'
+                                                                }`
+                                                            }
+                                                        >
+
+                                                            <span />
+
+                                                            {
+                                                                product.isActive
+                                                                    ? 'Active'
+                                                                    : 'Inactive'
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                </tr>
+
+                                            )
+                                        )
+                                    }
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    )}
+
+                </section>
+
+            </div>
+
+        </main>
     )
 }
 

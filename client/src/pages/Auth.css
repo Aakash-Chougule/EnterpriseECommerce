@@ -1,0 +1,404 @@
+/* ============================================================
+   AUTH PAGE
+   ============================================================ */
+
+.auth-page {
+    min-height: calc(100vh - 68px);
+    display: flex;
+    align-items: center;
+    padding: 50px 20px;
+    background: linear-gradient( 135deg, #f8fafc 0%, #eff6ff 100% );
+}
+
+.auth-container {
+    width: min(1050px, 100%);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.12);
+}
+
+/* ============================================================
+   LEFT SIDE
+   ============================================================ */
+
+.auth-showcase {
+    display: flex;
+    align-items: center;
+    padding: 60px;
+    background: linear-gradient( 145deg, #0f172a, #1e3a8a );
+    color: #ffffff;
+}
+
+.auth-showcase-content {
+    width: 100%;
+}
+
+.auth-showcase-badge {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #bfdbfe;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.auth-showcase h1 {
+    margin: 0 0 16px;
+    color: #ffffff;
+    font-size: 42px;
+    line-height: 1.1;
+    letter-spacing: -1px;
+}
+
+.auth-showcase > div > p {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.auth-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 38px;
+}
+
+.auth-benefit {
+    display: flex;
+    gap: 13px;
+}
+
+.auth-benefit-icon {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.25);
+    color: #93c5fd;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.auth-benefit strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.auth-benefit p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   FORM SECTION
+   ============================================================ */
+
+.auth-form-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 50px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 390px;
+}
+
+.register-card {
+    max-width: 480px;
+}
+
+.auth-card-header {
+    margin-bottom: 28px;
+}
+
+.auth-logo {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    border-radius: 11px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 21px;
+    font-weight: 800;
+}
+
+.auth-card-header h2 {
+    margin: 0 0 7px;
+    color: #0f172a;
+    font-size: 27px;
+}
+
+.auth-card-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.auth-name-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.auth-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+    .auth-form-group label {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+.optional-label {
+    margin-left: 7px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.auth-form-group input {
+    width: 100%;
+    padding: 12px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .auth-form-group input::placeholder {
+        color: #94a3b8;
+    }
+
+    .auth-form-group input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+/* ============================================================
+   BUTTON
+   ============================================================ */
+
+.auth-submit-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 3px;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .auth-submit-button:hover:not(:disabled) {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+    }
+
+    .auth-submit-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+
+.auth-alert {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 20px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+    .auth-alert > span {
+        width: 21px;
+        height: 21px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+.auth-alert-error {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+    .auth-alert-error > span {
+        background: #fee2e2;
+    }
+
+.auth-alert-success {
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+    .auth-alert-success > span {
+        background: #dcfce7;
+    }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.auth-footer {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+    .auth-footer a {
+        color: #2563eb;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+/* ============================================================
+   REGISTER
+   ============================================================ */
+
+.register-container {
+    width: min(1150px, 100%);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 850px) {
+
+    .auth-page {
+        padding: 35px 20px;
+    }
+
+    .auth-container {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+    }
+
+    .auth-showcase {
+        padding: 40px;
+    }
+
+        .auth-showcase h1 {
+            font-size: 34px;
+        }
+
+    .auth-benefits {
+        display: none;
+    }
+
+    .auth-form-section {
+        padding: 40px;
+    }
+
+    .auth-card,
+    .register-card {
+        max-width: none;
+    }
+}
+
+@media (max-width: 520px) {
+
+    .auth-page {
+        align-items: flex-start;
+        padding: 20px 12px;
+    }
+
+    .auth-container {
+        border-radius: 14px;
+    }
+
+    .auth-showcase {
+        padding: 30px 24px;
+    }
+
+        .auth-showcase h1 {
+            font-size: 29px;
+        }
+
+        .auth-showcase > div > p {
+            font-size: 14px;
+        }
+
+    .auth-form-section {
+        padding: 30px 22px;
+    }
+
+    .auth-name-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-card-header h2 {
+        font-size: 24px;
+    }
+
+    .auth-footer {
+        flex-wrap: wrap;
+    }
+}

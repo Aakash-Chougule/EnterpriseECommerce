@@ -13,59 +13,79 @@ import CheckoutPage from './pages/CheckoutPage'
 import OrderSuccessPage from './pages/OrderSuccessPage'
 import OrdersPage from './pages/OrdersPage'
 import PaymentPage from './pages/PaymentPage'
+
 import AdminDashboardPage
     from './pages/admin/AdminDashboardPage'
+
 import AdminProductsPage
     from './pages/admin/AdminProductsPage'
+
 import AdminOrdersPage
     from './pages/admin/AdminOrdersPage'
+
 import AdminCategoriesPage
     from './pages/admin/AdminCategoriesPage'
+
 import AdminDataPage
     from './pages/admin/AdminDataPage'
 
+import AdminInventoryPage
+    from './pages/admin/AdminInventoryPage'
+
 import Navbar from './components/Navbar'
-import ProtectedRoute from './components/ProtectedRoute'
+
+import ProtectedRoute
+    from './components/ProtectedRoute'
+
+// ============================================================
+// APPLICATION
+// ============================================================
 
 function App() {
 
     return (
         <BrowserRouter>
 
-            {/* ======================================================
-          GLOBAL NAVIGATION
-         ====================================================== */}
+            {/* ==================================================
+                GLOBAL NAVIGATION
+               ================================================== */}
 
             <Navbar />
 
-            {/* ======================================================
-          APPLICATION ROUTES
-         ====================================================== */}
+            {/* ==================================================
+                APPLICATION ROUTES
+               ================================================== */}
 
             <Routes>
 
-                {/* ====================================================
-            PUBLIC ROUTES
-           ==================================================== */}
+                {/* ==============================================
+                    PUBLIC ROUTES
+                   ============================================== */}
 
                 <Route
                     path="/"
-                    element={<HomePage />}
+                    element={
+                        <HomePage />
+                    }
                 />
 
                 <Route
                     path="/login"
-                    element={<LoginPage />}
+                    element={
+                        <LoginPage />
+                    }
                 />
 
                 <Route
                     path="/register"
-                    element={<RegisterPage />}
+                    element={
+                        <RegisterPage />
+                    }
                 />
 
-                {/* ====================================================
-            PROTECTED ROUTES
-           ==================================================== */}
+                {/* ==============================================
+                    CUSTOMER / AUTHENTICATED ROUTES
+                   ============================================== */}
 
                 <Route
                     path="/products"
@@ -121,6 +141,20 @@ function App() {
                     }
                 />
 
+                {/* ==============================================
+                    ADMIN ROUTES
+                   ==============================================
+                   
+                    Every admin route uses the same
+                    ProtectedRoute component.
+
+                    requiredRole="Admin"
+                    means:
+                    
+                    - User must be logged in
+                    - User role must be Admin
+                   ============================================== */}
+
                 <Route
                     path="/admin"
                     element={
@@ -140,15 +174,6 @@ function App() {
                 />
 
                 <Route
-                    path="/admin/orders"
-                    element={
-                        <ProtectedRoute requiredRole="Admin">
-                            <AdminOrdersPage />
-                        </ProtectedRoute>
-                    }
-                />
-
-                <Route
                     path="/admin/categories"
                     element={
                         <ProtectedRoute requiredRole="Admin">
@@ -158,10 +183,28 @@ function App() {
                 />
 
                 <Route
+                    path="/admin/orders"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminOrdersPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
                     path="/admin/data"
                     element={
                         <ProtectedRoute requiredRole="Admin">
                             <AdminDataPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/admin/inventory"
+                    element={
+                        <ProtectedRoute requiredRole="Admin">
+                            <AdminInventoryPage />
                         </ProtectedRoute>
                     }
                 />

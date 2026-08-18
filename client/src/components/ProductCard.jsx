@@ -2,13 +2,15 @@
 // PRODUCT CARD COMPONENT
 // ============================================================
 //
-// This is a reusable component.
+// Reusable product card used inside ProductsPage.
 //
-// Instead of writing the product HTML repeatedly inside
-// ProductsPage, we create it once here.
-//
-// The "product" value is received from the parent component
-// through React props.
+// Displays:
+// - Product name
+// - Description
+// - SKU
+// - Price
+// - Stock status
+// - Add to Cart button
 // ============================================================
 
 function ProductCard({
@@ -16,44 +18,164 @@ function ProductCard({
     onAddToCart,
     adding
 }) {
+
+    // ========================================================
+    // STOCK STATUS
+    // ========================================================
+
+    const stock =
+        product.stockQuantity ?? 0
+
+    const isOutOfStock =
+        stock <= 0
+
+    const isLowStock =
+        stock > 0 && stock <= 5
+
+    // ========================================================
+    // PRICE FORMAT
+    // ========================================================
+
+    const formattedPrice =
+        Number(
+            product.price || 0
+        ).toLocaleString(
+            'en-IN',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }
+        )
+
     return (
-        <div className="product-card">
 
-            <h2>
-                {product.name}
-            </h2>
+        <article className="product-card">
 
-            <p>
-                {product.description}
-            </p>
+            {/* ==================================================
+                CARD TOP
+               ================================================== */}
 
-            <p>
-                <strong>Price:</strong>
-                {' '}
-                ₹{product.price}
-            </p>
+            <div className="product-card-top">
 
-            {product.stockQuantity !== undefined && (
-                <p>
-                    <strong>Stock:</strong>
-                    {' '}
-                    {product.stockQuantity}
+                <div className="product-card-icon">
+                    {product.name
+                        ?.charAt(0)
+                        .toUpperCase() || 'P'}
+                </div>
+
+                <div
+                    className={
+                        `product-stock-badge ${isOutOfStock
+                            ? 'out-of-stock'
+                            : isLowStock
+                                ? 'low-stock'
+                                : 'in-stock'
+                        }`
+                    }
+                >
+
+                    {isOutOfStock
+                        ? 'Out of Stock'
+                        : isLowStock
+                            ? 'Low Stock'
+                            : 'In Stock'}
+
+                </div>
+
+            </div>
+
+            {/* ==================================================
+                PRODUCT INFORMATION
+               ================================================== */}
+
+            <div className="product-card-content">
+
+                {product.sku && (
+
+                    <span className="product-sku">
+                        SKU: {product.sku}
+                    </span>
+
+                )}
+
+                <h2>
+                    {product.name}
+                </h2>
+
+                <p className="product-description">
+
+                    {product.description ||
+                        'No description available.'}
+
                 </p>
-            )}
+
+            </div>
+
+            {/* ==================================================
+                PRICE
+               ================================================== */}
+
+            <div className="product-price">
+
+                <span className="product-price-label">
+                    Price
+                </span>
+
+                <strong>
+                    ₹{formattedPrice}
+                </strong>
+
+            </div>
+
+            {/* ==================================================
+                STOCK
+               ================================================== */}
+
+            <div className="product-stock-info">
+
+                <span>
+                    Available Stock
+                </span>
+
+                <strong
+                    className={
+                        isOutOfStock
+                            ? 'stock-danger'
+                            : isLowStock
+                                ? 'stock-warning'
+                                : ''
+                    }
+                >
+                    {stock}
+                </strong>
+
+            </div>
+
+            {/* ==================================================
+                ADD TO CART
+               ================================================== */}
 
             <button
                 type="button"
-                disabled={adding}
+                className="product-add-button"
+                disabled={
+                    adding ||
+                    isOutOfStock
+                }
                 onClick={() =>
                     onAddToCart(product)
                 }
             >
+
                 {adding
                     ? 'Adding...'
-                    : 'Add to Cart'}
+                    : isOutOfStock
+                        ? 'Out of Stock'
+                        : 'Add to Cart'}
+
             </button>
 
-        </div>
+        </article>
     )
 }
 

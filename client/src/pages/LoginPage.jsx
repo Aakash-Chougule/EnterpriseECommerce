@@ -1,43 +1,57 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import {
+    useState
+} from 'react'
 
-import { loginUser } from '../services/authService'
+import {
+    Link,
+    useNavigate
+} from 'react-router-dom'
+
+import {
+    useAuth
+} from '../context/AuthContext'
+
+import {
+    loginUser
+} from '../services/authService'
+
+import './Auth.css'
+
+// ============================================================
+// LOGIN PAGE
+// ============================================================
 
 function LoginPage() {
-    // ------------------------------------------------------------
-    // React state
-    // ------------------------------------------------------------
-    //
-    // useState stores values that can change while the page
-    // is running.
-    // ------------------------------------------------------------
 
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
+    const [email, setEmail] =
+        useState('')
 
-    const [error, setError] = useState('')
-    const [loading, setLoading] = useState(false)
+    const [password, setPassword] =
+        useState('')
 
-    // ------------------------------------------------------------
-    // React Router navigation
-    // ------------------------------------------------------------
+    const [error, setError] =
+        useState('')
 
-    const navigate = useNavigate()
+    const [loading, setLoading] =
+        useState(false)
 
-    const { login } = useAuth()
-    // ------------------------------------------------------------
-    // Login form submission
-    // ------------------------------------------------------------
+    const navigate =
+        useNavigate()
+
+    const {
+        login
+    } = useAuth()
+
+    // ========================================================
+    // LOGIN
+    // ========================================================
 
     const handleSubmit = async (event) => {
-        // Prevent normal browser form submission.
+
         event.preventDefault()
 
-        // Clear previous error.
         setError('')
 
-        // Basic frontend validation.
         if (!email.trim()) {
             setError('Email is required.')
             return
@@ -49,128 +63,267 @@ function LoginPage() {
         }
 
         try {
+
             setLoading(true)
 
-            // Call ASP.NET login endpoint.
-            const response = await loginUser(
-                email,
-                password
-            )
+            const response =
+                await loginUser(
+                    email,
+                    password
+                )
 
-            console.log(
-                'Login response:',
-                response
-            )
-
-            // --------------------------------------------------------
-            // JWT Storage
-            // --------------------------------------------------------
-            //
-            // We temporarily store the token in localStorage.
-            //
-            // Later, we will create an AuthContext so authentication
-            // is managed professionally across the whole React app.
-            // --------------------------------------------------------
-
-            // localStorage.setItem(
-            //     'accessToken',
-            //     response.token
-            // )
-
-            // Store the authenticated user and JWT through AuthContext.
+            // Store authenticated user and JWT.
             login(response)
 
-            // Redirect user after successful login.
-            navigate('/products')
-        } catch (err) {
+            // ============================================================
+            // ROLE-BASED REDIRECT
+            // ============================================================
+            //
+            // Admin    -> Admin Dashboard
+            // Customer -> Home Page
+            // ============================================================
+
+            if (response.role === 'Admin') {
+                navigate('/admin')
+            } else {
+                navigate('/')
+            }
+        }
+        catch (err) {
+
             console.error(
                 'Login failed:',
                 err
             )
 
-            // Try to display backend error message.
             const message =
                 err.response?.data?.message ||
                 'Login failed. Please check your email and password.'
 
             setError(message)
-        } finally {
+        }
+        finally {
+
             setLoading(false)
         }
     }
 
     return (
-        <div>
-            <h1>Login</h1>
 
-            {/* 
-        onSubmit runs handleSubmit when the user submits
-        this form.
-      */}
-            <form onSubmit={handleSubmit}>
+        <main className="auth-page">
 
-                <div>
-                    <label htmlFor="email">
-                        Email
-                    </label>
+            <div className="auth-container">
 
-                    <br />
+                {/* ==================================================
+                    LEFT SIDE
+                   ================================================== */}
 
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        placeholder="Enter your email"
+                <section className="auth-showcase">
 
-                        // Whenever the user types,
-                        // update React state.
-                        onChange={(event) =>
-                            setEmail(event.target.value)
-                        }
-                    />
-                </div>
+                    <div className="auth-showcase-content">
 
-                <br />
+                        <span className="auth-showcase-badge">
+                            Enterprise Commerce
+                        </span>
 
-                <div>
-                    <label htmlFor="password">
-                        Password
-                    </label>
+                        <h1>
+                            Welcome back.
+                        </h1>
 
-                    <br />
+                        <p>
+                            Sign in to continue shopping,
+                            manage your orders and access
+                            your account.
+                        </p>
 
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        placeholder="Enter your password"
+                        <div className="auth-benefits">
 
-                        onChange={(event) =>
-                            setPassword(event.target.value)
-                        }
-                    />
-                </div>
+                            <div className="auth-benefit">
 
-                <br />
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
 
-                {/* Show error only when one exists */}
-                {error && (
-                    <p>
-                        {error}
-                    </p>
-                )}
+                                <div>
+                                    <strong>
+                                        Browse Products
+                                    </strong>
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                >
-                    {loading
-                        ? 'Logging in...'
-                        : 'Login'}
-                </button>
+                                    <p>
+                                        Discover available products
+                                        from our catalog.
+                                    </p>
+                                </div>
 
-            </form>
-        </div>
+                            </div>
+
+                            <div className="auth-benefit">
+
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
+
+                                <div>
+                                    <strong>
+                                        Manage Orders
+                                    </strong>
+
+                                    <p>
+                                        View your orders and follow
+                                        their current status.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <div className="auth-benefit">
+
+                                <span className="auth-benefit-icon">
+                                    ✓
+                                </span>
+
+                                <div>
+                                    <strong>
+                                        Secure Access
+                                    </strong>
+
+                                    <p>
+                                        Your account is protected
+                                        through secure authentication.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
+                    LOGIN FORM
+                   ================================================== */}
+
+                <section className="auth-form-section">
+
+                    <div className="auth-card">
+
+                        <div className="auth-card-header">
+
+                            <div className="auth-logo">
+                                E
+                            </div>
+
+                            <h2>
+                                Sign in to your account
+                            </h2>
+
+                            <p>
+                                Enter your credentials to continue.
+                            </p>
+
+                        </div>
+
+                        {error && (
+
+                            <div className="auth-alert auth-alert-error">
+                                <span>!</span>
+
+                                {error}
+                            </div>
+
+                        )}
+
+                        <form
+                            onSubmit={handleSubmit}
+                            className="auth-form"
+                        >
+
+                            <div className="auth-form-group">
+
+                                <label htmlFor="email">
+                                    Email Address
+                                </label>
+
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    placeholder="name@example.com"
+                                    autoComplete="email"
+                                    onChange={
+                                        (event) =>
+                                            setEmail(
+                                                event.target.value
+                                            )
+                                    }
+                                />
+
+                            </div>
+
+                            <div className="auth-form-group">
+
+                                <label htmlFor="password">
+                                    Password
+                                </label>
+
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    placeholder="Enter your password"
+                                    autoComplete="current-password"
+                                    onChange={
+                                        (event) =>
+                                            setPassword(
+                                                event.target.value
+                                            )
+                                    }
+                                />
+
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="auth-submit-button"
+                                disabled={loading}
+                            >
+                                {
+                                    loading
+                                        ? 'Signing in...'
+                                        : 'Sign In'
+                                }
+
+                                {!loading && (
+                                    <span>
+                                        →
+                                    </span>
+                                )}
+
+                            </button>
+
+                        </form>
+
+                        <div className="auth-footer">
+
+                            <span>
+                                Don't have an account?
+                            </span>
+
+                            <Link to="/register">
+                                Create account
+                            </Link>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+        </main>
     )
 }
 

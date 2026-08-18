@@ -1,29 +1,21 @@
 import {
     Link,
+    NavLink,
     useNavigate
 } from 'react-router-dom'
+
+import {
+    useState
+} from 'react'
 
 import {
     useAuth
 } from '../context/AuthContext'
 
+import './Navbar.css'
+
 // ============================================================
-// NAVBAR COMPONENT
-// ============================================================
-//
-// This component is responsible for application navigation.
-//
-// It reads authentication information from AuthContext and
-// displays different links depending on:
-//
-// - Whether the user is logged in
-// - Whether the user is an Admin or Customer
-//
-// Later we can improve this navbar with:
-// - Professional styling
-// - Responsive/mobile menu
-// - Cart item count
-// - User profile menu
+// NAVBAR
 // ============================================================
 
 function Navbar() {
@@ -37,172 +29,325 @@ function Navbar() {
         logout
     } = useAuth()
 
-    // ==========================================================
+    const [mobileMenuOpen, setMobileMenuOpen] =
+        useState(false)
+
+    const [adminMenuOpen, setAdminMenuOpen] =
+        useState(false)
+
+    // ========================================================
     // LOGOUT
-    // ==========================================================
-    //
-    // AuthContext removes:
-    // - accessToken
-    // - user
-    //
-    // After logout, redirect the user to the login page.
-    // ==========================================================
+    // ========================================================
 
     const handleLogout = () => {
 
         logout()
 
+        setMobileMenuOpen(false)
+        setAdminMenuOpen(false)
+
         navigate('/login')
     }
 
+    // ========================================================
+    // CLOSE MOBILE MENU
+    // ========================================================
+
+    const closeMenu = () => {
+
+        setMobileMenuOpen(false)
+        setAdminMenuOpen(false)
+    }
+
+    // ========================================================
+    // ACTIVE LINK CLASS
+    // ========================================================
+
+    const getNavLinkClass =
+        ({ isActive }) =>
+            isActive
+                ? 'navbar-link active'
+                : 'navbar-link'
+
     return (
-        <nav>
 
-            {/* ======================================================
-          PUBLIC LINK
-         ====================================================== */}
+        <header className="navbar">
 
-            <Link to="/">
-                Home
-            </Link>
+            <div className="navbar-container">
 
-            {/* ======================================================
-          AUTHENTICATED USER LINKS
-         ====================================================== */}
+                {/* ==================================================
+                    BRAND
+                   ================================================== */}
 
-            {isAuthenticated && (
-                <>
-
-                    {' | '}
-
-                    <Link to="/products">
-                        Products
-                    </Link>
-
-                    {' | '}
-
-                    <Link to="/cart">
-                        Cart
-                    </Link>
-
-                    {' | '}
-
-                    <Link to="/orders">
-                        My Orders
-                    </Link>
-
-                    {/* ==================================================
-              ADMIN LINKS
-             ==================================================
-             
-              These links are shown only when the authenticated
-              user's role is exactly "Admin".
-
-              Customers will not see these links.
-             ================================================== */}
-
-                    {user?.role === 'Admin' && (
-                        <>
-
-                            {' | '}
-
-                            <Link to="/admin">
-                                Admin Dashboard
-                            </Link>
-
-                            {' | '}
-
-                            <Link to="/admin/products">
-                                Manage Products
-                            </Link>
-
-                            {' | '}
-
-                            <Link to="/admin/orders">
-                                Manage Orders
-                            </Link>
-
-                            {' | '}
-
-                            <Link to="/admin/categories">
-                                Manage Categories
-                            </Link>
-
-                            {' | '}
-
-                            <Link to="/admin/data">
-                                Admin Data
-                            </Link>
-
-                        </>
-                    )}
-
-                </>
-            )}
-
-            {/* ======================================================
-          AUTHENTICATION LINKS
-         ====================================================== */}
-
-            {isAuthenticated ? (
-
-                <>
-
-                    {' | '}
-
-                    <span>
-                        Welcome {user?.firstName}
+                <Link
+                    to="/"
+                    className="navbar-brand"
+                    onClick={closeMenu}
+                >
+                    <span className="brand-icon">
+                        E
                     </span>
 
-                    {/* --------------------------------------------------
-              Display the user's role temporarily.
+                    <span className="brand-text">
+                        Enterprise
+                        <strong>
+                            Commerce
+                        </strong>
+                    </span>
+                </Link>
 
-              This is useful while developing and testing
-              Admin/Customer authorization.
+                {/* ==================================================
+                    MOBILE BUTTON
+                   ================================================== */}
 
-              Later we can remove this or display it inside a
-              profile dropdown.
-             -------------------------------------------------- */}
+                <button
+                    type="button"
+                    className="navbar-toggle"
+                    onClick={
+                        () =>
+                            setMobileMenuOpen(
+                                current => !current
+                            )
+                    }
+                    aria-label="Toggle navigation"
+                >
+                    ☰
+                </button>
 
-                    {user?.role && (
-                        <>
-                            {' '}
-                            ({user.role})
-                        </>
-                    )}
+                {/* ==================================================
+                    NAVIGATION
+                   ================================================== */}
 
-                    {' | '}
+                <div
+                    className={
+                        mobileMenuOpen
+                            ? 'navbar-content open'
+                            : 'navbar-content'
+                    }
+                >
 
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                    >
-                        Logout
-                    </button>
+                    <nav className="navbar-links">
 
-                </>
+                        <NavLink
+                            to="/"
+                            end
+                            className={getNavLinkClass}
+                            onClick={closeMenu}
+                        >
+                            Home
+                        </NavLink>
 
-            ) : (
+                        {isAuthenticated && (
 
-                <>
+                            <>
 
-                    {' | '}
+                                <NavLink
+                                    to="/products"
+                                    className={getNavLinkClass}
+                                    onClick={closeMenu}
+                                >
+                                    Products
+                                </NavLink>
 
-                    <Link to="/login">
-                        Login
-                    </Link>
+                                <NavLink
+                                    to="/cart"
+                                    className={getNavLinkClass}
+                                    onClick={closeMenu}
+                                >
+                                    Cart
+                                </NavLink>
 
-                    {' | '}
+                                <NavLink
+                                    to="/orders"
+                                    className={getNavLinkClass}
+                                    onClick={closeMenu}
+                                >
+                                    My Orders
+                                </NavLink>
 
-                    <Link to="/register">
-                        Register
-                    </Link>
+                                {/* ==================================
+                                    ADMIN DROPDOWN
+                                   ================================== */}
 
-                </>
+                                {user?.role === 'Admin' && (
 
-            )}
+                                    <div className="admin-dropdown">
 
-        </nav>
+                                        <button
+                                            type="button"
+                                            className="admin-dropdown-button"
+                                            onClick={
+                                                () =>
+                                                    setAdminMenuOpen(
+                                                        current =>
+                                                            !current
+                                                    )
+                                            }
+                                        >
+                                            Admin
+
+                                            <span
+                                                className={
+                                                    adminMenuOpen
+                                                        ? 'dropdown-arrow open'
+                                                        : 'dropdown-arrow'
+                                                }
+                                            >
+                                                ▾
+                                            </span>
+                                        </button>
+
+                                        {adminMenuOpen && (
+
+                                            <div className="admin-dropdown-menu">
+
+                                                <NavLink
+                                                    to="/admin"
+                                                    end
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Dashboard
+                                                </NavLink>
+
+                                                <NavLink
+                                                    to="/admin/products"
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Manage Products
+                                                </NavLink>
+
+                                                <NavLink
+                                                    to="/admin/categories"
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Manage Categories
+                                                </NavLink>
+
+                                                <NavLink
+                                                    to="/admin/orders"
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Manage Orders
+                                                </NavLink>
+
+                                                <NavLink
+                                                    to="/admin/inventory"
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Inventory
+                                                </NavLink>
+
+                                                <NavLink
+                                                    to="/admin/data"
+                                                    className="dropdown-link"
+                                                    onClick={closeMenu}
+                                                >
+                                                    Admin Data
+                                                </NavLink>
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+                                )}
+
+                            </>
+
+                        )}
+
+                    </nav>
+
+                    {/* ==================================================
+                        USER SECTION
+                       ================================================== */}
+
+                    <div className="navbar-user">
+
+                        {isAuthenticated ? (
+
+                            <>
+
+                                <div className="user-information">
+
+                                    <div className="user-avatar">
+
+                                        {
+                                            user?.firstName
+                                                ?.charAt(0)
+                                                ?.toUpperCase()
+                                            || 'U'
+                                        }
+
+                                    </div>
+
+                                    <div className="user-details">
+
+                                        <span className="user-name">
+                                            {
+                                                user?.firstName ||
+                                                'User'
+                                            }
+                                        </span>
+
+                                        <span className="user-role">
+                                            {
+                                                user?.role ||
+                                                'Customer'
+                                            }
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="logout-button"
+                                    onClick={handleLogout}
+                                >
+                                    Logout
+                                </button>
+
+                            </>
+
+                        ) : (
+
+                            <>
+
+                                <NavLink
+                                    to="/login"
+                                    className="login-link"
+                                    onClick={closeMenu}
+                                >
+                                    Login
+                                </NavLink>
+
+                                <NavLink
+                                    to="/register"
+                                    className="register-link"
+                                    onClick={closeMenu}
+                                >
+                                    Create Account
+                                </NavLink>
+
+                            </>
+
+                        )}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
     )
 }
 

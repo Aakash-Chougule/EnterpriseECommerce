@@ -23,12 +23,15 @@ public class ProductsController : ControllerBase
     // ============================================================
     //
     // GET: api/Products
+    //
+    // Public endpoint.
+    // Returns active products only.
     // ============================================================
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<
-        IReadOnlyList<ProductDto>>> GetAll()
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>>
+        GetAll()
     {
         var products =
             await _productService
@@ -43,13 +46,17 @@ public class ProductsController : ControllerBase
     //
     // GET: api/Products/admin/all
     //
-    // Returns active + inactive products.
+    // Returns:
+    // - Active products
+    // - Inactive products
+    //
+    // Admin only.
     // ============================================================
 
     [Authorize(Roles = "Admin")]
     [HttpGet("admin/all")]
-    public async Task<ActionResult<
-        IReadOnlyList<ProductDto>>> GetAllForAdmin()
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>>
+        GetAllForAdmin()
     {
         var products =
             await _productService
@@ -59,7 +66,54 @@ public class ProductsController : ControllerBase
     }
 
     // ============================================================
+    // ADMIN - GET LOW STOCK PRODUCTS
+    // ============================================================
+    //
+    // GET:
+    // api/Products/admin/low-stock
+    //
+    // Optional:
+    // api/Products/admin/low-stock?threshold=10
+    //
+    // Default threshold:
+    // 5
+    //
+    // Admin only.
+    // ============================================================
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("admin/low-stock")]
+    public async Task<ActionResult<IReadOnlyList<ProductDto>>>
+        GetLowStockProducts(
+            [FromQuery] int threshold = 5)
+    {
+        try
+        {
+            var products =
+                await _productService
+                    .GetLowStockProductsAsync(
+                        threshold);
+
+            return Ok(products);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    // ============================================================
     // GET PRODUCT BY ID
+    // ============================================================
+    //
+    // GET:
+    // api/Products/{id}
+    //
+    // Public endpoint.
+    // Returns active product only.
     // ============================================================
 
     [HttpGet("{id:guid}")]
@@ -86,6 +140,17 @@ public class ProductsController : ControllerBase
 
     // ============================================================
     // CREATE PRODUCT
+    // ============================================================
+    //
+    // POST:
+    // api/Products
+    //
+    // Admin only.
+    //
+    // Handles:
+    // - New product creation
+    // - Duplicate active SKU rejection
+    // - Inactive product reactivation
     // ============================================================
 
     [Authorize(Roles = "Admin")]
@@ -114,22 +179,26 @@ public class ProductsController : ControllerBase
         {
             return BadRequest(new
             {
-                message =
-                    ex.Message
+                message = ex.Message
             });
         }
         catch (InvalidOperationException ex)
         {
             return Conflict(new
             {
-                message =
-                    ex.Message
+                message = ex.Message
             });
         }
     }
 
     // ============================================================
     // UPDATE PRODUCT
+    // ============================================================
+    //
+    // PUT:
+    // api/Products/{id}
+    //
+    // Admin only.
     // ============================================================
 
     [Authorize(Roles = "Admin")]
@@ -163,8 +232,123 @@ public class ProductsController : ControllerBase
         {
             return BadRequest(new
             {
-                message =
-                    ex.Message
+                message = ex.Message
+            });
+        }
+    }
+
+    // ============================================================
+    // ADMIN - INCREASE PRODUCT STOCK
+    // ============================================================
+    //
+    // POST:
+    // api/Products/{id}/stock/increase
+    //
+    // Request:
+    //
+    // {
+    //     "quantity": 10
+    // }
+    //
+    // Example:
+    //
+    // Current stock = 5
+    // Add           = 10
+    // New stock     = 15
+    //
+    // Admin only.
+    // ============================================================
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{id:guid}/stock/increase")]
+    public async Task<ActionResult<ProductDto>>
+        IncreaseStock(
+            Guid id,
+            [FromBody]
+            StockAdjustmentRequest request)
+    {
+        try
+        {
+            var product =
+                await _productService
+                    .IncreaseProductStockAsync(
+                        id,
+                        request.Quantity);
+
+            return Ok(product);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    // ============================================================
+    // ADMIN - DECREASE PRODUCT STOCK
+    // ============================================================
+    //
+    // POST:
+    // api/Products/{id}/stock/decrease
+    //
+    // Request:
+    //
+    // {
+    //     "quantity": 5
+    // }
+    //
+    // Product.ReduceStock() prevents stock from becoming
+    // negative.
+    //
+    // Admin only.
+    // ============================================================
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{id:guid}/stock/decrease")]
+    public async Task<ActionResult<ProductDto>>
+        DecreaseStock(
+            Guid id,
+            [FromBody]
+            StockAdjustmentRequest request)
+    {
+        try
+        {
+            var product =
+                await _productService
+                    .DecreaseProductStockAsync(
+                        id,
+                        request.Quantity);
+
+            return Ok(product);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new
+            {
+                message = ex.Message
             });
         }
     }
@@ -172,11 +356,20 @@ public class ProductsController : ControllerBase
     // ============================================================
     // DEACTIVATE PRODUCT
     // ============================================================
+    //
+    // DELETE:
+    // api/Products/{id}
+    //
+    // This is a soft delete.
+    //
+    // Admin only.
+    // ============================================================
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(
-        Guid id)
+    public async Task<IActionResult>
+        Delete(
+            Guid id)
     {
         var success =
             await _productService
@@ -197,4 +390,25 @@ public class ProductsController : ControllerBase
                 "Product deactivated successfully."
         });
     }
+}
+
+// ============================================================
+// STOCK ADJUSTMENT REQUEST
+// ============================================================
+//
+// Request body used by:
+//
+// POST /api/Products/{id}/stock/increase
+// POST /api/Products/{id}/stock/decrease
+//
+// Example:
+//
+// {
+//     "quantity": 5
+// }
+// ============================================================
+
+public class StockAdjustmentRequest
+{
+    public int Quantity { get; set; }
 }

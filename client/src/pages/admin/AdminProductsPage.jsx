@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useMemo,
     useState
 } from 'react'
 
@@ -14,67 +15,36 @@ import {
     getCategories
 } from '../../services/categoryService'
 
+import './AdminProductsPage.css'
+
 // ============================================================
 // ADMIN PRODUCTS PAGE
-// ============================================================
-//
-// Admin capabilities:
-// - View products
-// - Create product
-// - Edit product
-// - Deactivate product
-// - Select category from dropdown
-//
-// Later we can improve this page with:
-// - Better styling
-// - Search
-// - Pagination
-// - Image upload
 // ============================================================
 
 function AdminProductsPage() {
 
-    // ==========================================================
-    // PRODUCT LIST
-    // ==========================================================
+    // ========================================================
+    // DATA
+    // ========================================================
 
     const [products, setProducts] =
         useState([])
 
-    // ==========================================================
-    // CATEGORY LIST
-    // ==========================================================
-    //
-    // Categories are loaded from:
-    //
-    // GET /api/Categories
-    //
-    // The dropdown displays category.name,
-    // but stores category.id.
-    // ==========================================================
-
     const [categories, setCategories] =
         useState([])
 
-    // ==========================================================
+    // ========================================================
     // FORM MODE
-    // ==========================================================
-    //
-    // editingProductId = null
-    //     → Create mode
-    //
-    // editingProductId = product id
-    //     → Edit mode
-    // ==========================================================
+    // ========================================================
 
     const [
         editingProductId,
         setEditingProductId
     ] = useState(null)
 
-    // ==========================================================
+    // ========================================================
     // FORM STATE
-    // ==========================================================
+    // ========================================================
 
     const [formData, setFormData] =
         useState({
@@ -86,9 +56,9 @@ function AdminProductsPage() {
             stockQuantity: ''
         })
 
-    // ==========================================================
+    // ========================================================
     // UI STATE
-    // ==========================================================
+    // ========================================================
 
     const [loading, setLoading] =
         useState(true)
@@ -102,22 +72,28 @@ function AdminProductsPage() {
     const [message, setMessage] =
         useState('')
 
-    // ==========================================================
+    const [search, setSearch] =
+        useState('')
+
+    // ========================================================
     // LOAD PRODUCTS
-    // ==========================================================
+    // ========================================================
 
     const loadProducts = async () => {
 
         try {
 
             setLoading(true)
-
             setError('')
 
             const data =
                 await getProducts()
 
-            setProducts(data)
+            setProducts(
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
         }
         catch (err) {
 
@@ -137,22 +113,9 @@ function AdminProductsPage() {
         }
     }
 
-    // ==========================================================
+    // ========================================================
     // LOAD CATEGORIES
-    // ==========================================================
-    //
-    // The backend returns active categories.
-    //
-    // Example:
-    //
-    // [
-    //   {
-    //     id: "...",
-    //     name: "Electronics"
-    //   }
-    // ]
-    //
-    // ==========================================================
+    // ========================================================
 
     const loadCategories = async () => {
 
@@ -161,12 +124,11 @@ function AdminProductsPage() {
             const data =
                 await getCategories()
 
-            console.log(
-                'Categories received:',
-                data
+            setCategories(
+                Array.isArray(data)
+                    ? data
+                    : []
             )
-
-            setCategories(data)
         }
         catch (err) {
 
@@ -182,9 +144,9 @@ function AdminProductsPage() {
         }
     }
 
-    // ==========================================================
-    // HANDLE FORM INPUT
-    // ==========================================================
+    // ========================================================
+    // INPUT CHANGE
+    // ========================================================
 
     const handleChange =
         (event) => {
@@ -197,15 +159,14 @@ function AdminProductsPage() {
             setFormData(
                 current => ({
                     ...current,
-
                     [name]: value
                 })
             )
         }
 
-    // ==========================================================
+    // ========================================================
     // RESET FORM
-    // ==========================================================
+    // ========================================================
 
     const resetForm = () => {
 
@@ -221,9 +182,9 @@ function AdminProductsPage() {
         })
     }
 
-    // ==========================================================
-    // START EDITING
-    // ==========================================================
+    // ========================================================
+    // START EDIT
+    // ========================================================
 
     const handleEdit =
         (product) => {
@@ -254,11 +215,16 @@ function AdminProductsPage() {
 
             setMessage('')
             setError('')
+
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            })
         }
 
-    // ==========================================================
+    // ========================================================
     // SAVE PRODUCT
-    // ==========================================================
+    // ========================================================
 
     const handleSubmit =
         async (event) => {
@@ -267,10 +233,6 @@ function AdminProductsPage() {
 
             setError('')
             setMessage('')
-
-            // ------------------------------------------------------
-            // PRODUCT NAME
-            // ------------------------------------------------------
 
             if (!formData.name.trim()) {
 
@@ -281,12 +243,10 @@ function AdminProductsPage() {
                 return
             }
 
-            // ------------------------------------------------------
-            // PRICE
-            // ------------------------------------------------------
-
             if (
-                Number(formData.price) < 0
+                Number(
+                    formData.price
+                ) < 0
             ) {
 
                 setError(
@@ -295,10 +255,6 @@ function AdminProductsPage() {
 
                 return
             }
-
-            // ------------------------------------------------------
-            // STOCK
-            // ------------------------------------------------------
 
             if (
                 Number(
@@ -317,19 +273,9 @@ function AdminProductsPage() {
 
                 setSaving(true)
 
-                // ====================================================
+                // =============================================
                 // EDIT MODE
-                // ====================================================
-                //
-                // Your backend UpdateProductRequest currently accepts:
-                //
-                // - Name
-                // - Description
-                // - Price
-                // - StockQuantity
-                //
-                // It does NOT currently update CategoryId or SKU.
-                // ====================================================
+                // =============================================
 
                 if (editingProductId) {
 
@@ -362,15 +308,11 @@ function AdminProductsPage() {
                     )
                 }
 
-                // ====================================================
+                // =============================================
                 // CREATE MODE
-                // ====================================================
+                // =============================================
 
                 else {
-
-                    // --------------------------------------------------
-                    // CATEGORY VALIDATION
-                    // --------------------------------------------------
 
                     if (!formData.categoryId) {
 
@@ -380,10 +322,6 @@ function AdminProductsPage() {
 
                         return
                     }
-
-                    // --------------------------------------------------
-                    // SKU VALIDATION
-                    // --------------------------------------------------
 
                     if (!formData.sku.trim()) {
 
@@ -450,9 +388,9 @@ function AdminProductsPage() {
             }
         }
 
-    // ==========================================================
+    // ========================================================
     // DEACTIVATE PRODUCT
-    // ==========================================================
+    // ========================================================
 
     const handleDeactivate =
         async (productId) => {
@@ -495,481 +433,799 @@ function AdminProductsPage() {
             }
         }
 
-    // ==========================================================
+    // ========================================================
     // INITIAL LOAD
-    // ==========================================================
-    //
-    // Load both products and categories when this page opens.
-    // ==========================================================
+    // ========================================================
 
     useEffect(() => {
 
         loadProducts()
-
         loadCategories()
 
     }, [])
 
-    // ==========================================================
+    // ========================================================
+    // HELPERS
+    // ========================================================
+
+    const getCategoryName =
+        (categoryId) => {
+
+            const category =
+                categories.find(
+                    item =>
+                        item.id === categoryId
+                )
+
+            return category?.name ||
+                'Unknown Category'
+        }
+
+    const formatPrice =
+        (price) =>
+            Number(
+                price ?? 0
+            ).toLocaleString(
+                'en-IN',
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            )
+
+    const getStockStatus =
+        (stockQuantity) => {
+
+            if (stockQuantity === 0) {
+                return {
+                    label: 'Out of Stock',
+                    className: 'danger'
+                }
+            }
+
+            if (stockQuantity <= 5) {
+                return {
+                    label: 'Low Stock',
+                    className: 'warning'
+                }
+            }
+
+            return {
+                label: 'In Stock',
+                className: 'success'
+            }
+        }
+
+    // ========================================================
+    // SEARCH
+    // ========================================================
+
+    const filteredProducts =
+        useMemo(() => {
+
+            const value =
+                search
+                    .trim()
+                    .toLowerCase()
+
+            if (!value) {
+                return products
+            }
+
+            return products.filter(
+                product => {
+
+                    const categoryName =
+                        getCategoryName(
+                            product.categoryId
+                        )
+
+                    const searchable = `
+                        ${product.name ?? ''}
+                        ${product.sku ?? ''}
+                        ${product.description ?? ''}
+                        ${categoryName}
+                    `.toLowerCase()
+
+                    return searchable.includes(
+                        value
+                    )
+                }
+            )
+
+        }, [
+            products,
+            categories,
+            search
+        ])
+
+    // ========================================================
     // UI
-    // ==========================================================
+    // ========================================================
 
     return (
-        <div>
 
-            <h1>
-                Admin Product Management
-            </h1>
+        <main className="admin-products-page">
 
-            {/* ====================================================
-          ERROR MESSAGE
-         ==================================================== */}
+            <div className="admin-products-container">
 
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
+                {/* ==============================================
+                    HEADER
+                   ============================================== */}
 
-            {/* ====================================================
-          SUCCESS MESSAGE
-         ==================================================== */}
-
-            {message && (
-                <p>
-                    {message}
-                </p>
-            )}
-
-            {/* ====================================================
-          PRODUCT FORM
-         ==================================================== */}
-
-            <section>
-
-                <h2>
-                    {
-                        editingProductId
-                            ? 'Edit Product'
-                            : 'Create Product'
-                    }
-                </h2>
-
-                <form
-                    onSubmit={handleSubmit}
-                >
-
-                    {/* ================================================
-              CATEGORY DROPDOWN
-             ================================================
-             
-              The admin sees the category name.
-
-              React stores the category GUID.
-
-              Example:
-
-              Admin sees:
-              Electronics
-
-              React stores:
-              773d...-category-guid
-             ================================================ */}
-
-                    {!editingProductId && (
-                        <div>
-
-                            <label
-                                htmlFor="categoryId"
-                            >
-                                Category
-                            </label>
-
-                            <br />
-
-                            <select
-                                id="categoryId"
-                                name="categoryId"
-
-                                value={
-                                    formData.categoryId
-                                }
-
-                                onChange={
-                                    handleChange
-                                }
-
-                                required
-                            >
-
-                                <option value="">
-                                    -- Select Category --
-                                </option>
-
-                                {categories.map(
-                                    (category) => (
-
-                                        <option
-                                            key={
-                                                category.id
-                                            }
-
-                                            value={
-                                                category.id
-                                            }
-                                        >
-                                            {
-                                                category.name
-                                            }
-                                        </option>
-
-                                    )
-                                )}
-
-                            </select>
-
-                        </div>
-                    )}
-
-                    <br />
-
-                    {/* ================================================
-              NAME
-             ================================================ */}
+                <header className="admin-products-header">
 
                     <div>
 
-                        <label
-                            htmlFor="name"
-                        >
-                            Name
-                        </label>
+                        <span className="admin-products-eyebrow">
+                            Product Management
+                        </span>
 
-                        <br />
+                        <h1>
+                            Admin Products
+                        </h1>
 
-                        <input
-                            id="name"
-                            name="name"
-                            type="text"
-
-                            value={
-                                formData.name
-                            }
-
-                            onChange={
-                                handleChange
-                            }
-                        />
+                        <p>
+                            Create, update and manage
+                            products in your catalog.
+                        </p>
 
                     </div>
 
-                    <br />
+                    <div className="admin-products-count">
 
-                    {/* ================================================
-              DESCRIPTION
-             ================================================ */}
+                        <strong>
+                            {products.length}
+                        </strong>
 
-                    <div>
-
-                        <label
-                            htmlFor="description"
-                        >
-                            Description
-                        </label>
-
-                        <br />
-
-                        <textarea
-                            id="description"
-                            name="description"
-
-                            value={
-                                formData.description
-                            }
-
-                            onChange={
-                                handleChange
-                            }
-                        />
+                        <span>
+                            Products
+                        </span>
 
                     </div>
 
-                    <br />
+                </header>
 
-                    {/* ================================================
-              SKU
-             ================================================ */}
+                {/* ==============================================
+                    ALERTS
+                   ============================================== */}
 
-                    {!editingProductId && (
-                        <div>
+                {error && (
 
-                            <label
-                                htmlFor="sku"
-                            >
-                                SKU
-                            </label>
+                    <div className="admin-products-alert error">
 
-                            <br />
+                        <span>
+                            !
+                        </span>
 
-                            <input
-                                id="sku"
-                                name="sku"
-                                type="text"
-
-                                value={
-                                    formData.sku
-                                }
-
-                                onChange={
-                                    handleChange
-                                }
-                            />
-
-                        </div>
-                    )}
-
-                    <br />
-
-                    {/* ================================================
-              PRICE
-             ================================================ */}
-
-                    <div>
-
-                        <label
-                            htmlFor="price"
-                        >
-                            Price
-                        </label>
-
-                        <br />
-
-                        <input
-                            id="price"
-                            name="price"
-                            type="number"
-                            min="0"
-                            step="0.01"
-
-                            value={
-                                formData.price
-                            }
-
-                            onChange={
-                                handleChange
-                            }
-                        />
+                        {error}
 
                     </div>
-
-                    <br />
-
-                    {/* ================================================
-              STOCK QUANTITY
-             ================================================ */}
-
-                    <div>
-
-                        <label
-                            htmlFor="stockQuantity"
-                        >
-                            Stock Quantity
-                        </label>
-
-                        <br />
-
-                        <input
-                            id="stockQuantity"
-                            name="stockQuantity"
-                            type="number"
-                            min="0"
-
-                            value={
-                                formData.stockQuantity
-                            }
-
-                            onChange={
-                                handleChange
-                            }
-                        />
-
-                    </div>
-
-                    <br />
-
-                    {/* ================================================
-              SAVE BUTTON
-             ================================================ */}
-
-                    <button
-                        type="submit"
-                        disabled={saving}
-                    >
-                        {
-                            saving
-                                ? 'Saving...'
-                                : editingProductId
-                                    ? 'Update Product'
-                                    : 'Create Product'
-                        }
-                    </button>
-
-                    {/* ================================================
-              CANCEL EDIT
-             ================================================ */}
-
-                    {editingProductId && (
-                        <>
-
-                            {' '}
-
-                            <button
-                                type="button"
-                                onClick={resetForm}
-                            >
-                                Cancel Edit
-                            </button>
-
-                        </>
-                    )}
-
-                </form>
-
-            </section>
-
-            <hr />
-
-            {/* ====================================================
-          PRODUCT LIST
-         ==================================================== */}
-
-            <section>
-
-                <h2>
-                    Products
-                </h2>
-
-                {loading ? (
-
-                    <p>
-                        Loading products...
-                    </p>
-
-                ) : products.length === 0 ? (
-
-                    <p>
-                        No products found.
-                    </p>
-
-                ) : (
-
-                    products.map(
-                        (product) => (
-
-                            <div
-                                key={product.id}
-                            >
-
-                                <h3>
-                                    {product.name}
-                                </h3>
-
-                                <p>
-
-                                    <strong>
-                                        SKU:
-                                    </strong>
-
-                                    {' '}
-
-                                    {product.sku}
-
-                                </p>
-
-                                <p>
-
-                                    <strong>
-                                        Price:
-                                    </strong>
-
-                                    {' '}
-
-                                    ₹{Number(
-                                        product.price
-                                    ).toLocaleString(
-                                        'en-IN'
-                                    )}
-
-                                </p>
-
-                                <p>
-
-                                    <strong>
-                                        Stock:
-                                    </strong>
-
-                                    {' '}
-
-                                    {
-                                        product.stockQuantity
-                                    }
-
-                                </p>
-
-                                <p>
-
-                                    <strong>
-                                        Active:
-                                    </strong>
-
-                                    {' '}
-
-                                    {
-                                        product.isActive
-                                            ? 'Yes'
-                                            : 'No'
-                                    }
-
-                                </p>
-
-                                <button
-                                    type="button"
-
-                                    onClick={() =>
-                                        handleEdit(
-                                            product
-                                        )
-                                    }
-                                >
-                                    Edit
-                                </button>
-
-                                {' '}
-
-                                <button
-                                    type="button"
-
-                                    onClick={() =>
-                                        handleDeactivate(
-                                            product.id
-                                        )
-                                    }
-                                >
-                                    Deactivate
-                                </button>
-
-                                <hr />
-
-                            </div>
-
-                        )
-                    )
 
                 )}
 
-            </section>
+                {message && (
 
-        </div>
+                    <div className="admin-products-alert success">
+
+                        <span>
+                            ✓
+                        </span>
+
+                        {message}
+
+                    </div>
+
+                )}
+
+                {/* ==============================================
+                    PRODUCT FORM
+                   ============================================== */}
+
+                <section className="admin-product-form-card">
+
+                    <div className="admin-product-form-header">
+
+                        <div>
+
+                            <span>
+                                {
+                                    editingProductId
+                                        ? 'Editing'
+                                        : 'New Product'
+                                }
+                            </span>
+
+                            <h2>
+                                {
+                                    editingProductId
+                                        ? 'Edit Product'
+                                        : 'Create Product'
+                                }
+                            </h2>
+
+                            <p>
+                                {
+                                    editingProductId
+                                        ? 'Update the selected product information.'
+                                        : 'Add a new product to your catalog.'
+                                }
+                            </p>
+
+                        </div>
+
+                        {editingProductId && (
+
+                            <div className="editing-badge">
+                                Edit Mode
+                            </div>
+
+                        )}
+
+                    </div>
+
+                    <form
+                        className="admin-product-form"
+                        onSubmit={handleSubmit}
+                    >
+
+                        <div className="admin-product-form-grid">
+
+                            {/* ==============================
+                                CATEGORY
+                               ============================== */}
+
+                            {!editingProductId && (
+
+                                <div className="admin-form-group">
+
+                                    <label
+                                        htmlFor="categoryId"
+                                    >
+                                        Category
+                                    </label>
+
+                                    <select
+                                        id="categoryId"
+                                        name="categoryId"
+                                        value={
+                                            formData.categoryId
+                                        }
+                                        onChange={
+                                            handleChange
+                                        }
+                                        required
+                                    >
+
+                                        <option value="">
+                                            Select Category
+                                        </option>
+
+                                        {categories.map(
+                                            category => (
+
+                                                <option
+                                                    key={
+                                                        category.id
+                                                    }
+                                                    value={
+                                                        category.id
+                                                    }
+                                                >
+                                                    {
+                                                        category.name
+                                                    }
+                                                </option>
+
+                                            )
+                                        )}
+
+                                    </select>
+
+                                </div>
+
+                            )}
+
+                            {/* ==============================
+                                NAME
+                               ============================== */}
+
+                            <div className="admin-form-group">
+
+                                <label
+                                    htmlFor="name"
+                                >
+                                    Product Name
+                                </label>
+
+                                <input
+                                    id="name"
+                                    name="name"
+                                    type="text"
+                                    value={
+                                        formData.name
+                                    }
+                                    placeholder="Enter product name"
+                                    onChange={
+                                        handleChange
+                                    }
+                                />
+
+                            </div>
+
+                            {/* ==============================
+                                SKU
+                               ============================== */}
+
+                            {!editingProductId && (
+
+                                <div className="admin-form-group">
+
+                                    <label
+                                        htmlFor="sku"
+                                    >
+                                        SKU
+                                    </label>
+
+                                    <input
+                                        id="sku"
+                                        name="sku"
+                                        type="text"
+                                        value={
+                                            formData.sku
+                                        }
+                                        placeholder="Example: LAP-001"
+                                        onChange={
+                                            handleChange
+                                        }
+                                    />
+
+                                </div>
+
+                            )}
+
+                            {/* ==============================
+                                PRICE
+                               ============================== */}
+
+                            <div className="admin-form-group">
+
+                                <label
+                                    htmlFor="price"
+                                >
+                                    Price
+                                </label>
+
+                                <input
+                                    id="price"
+                                    name="price"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                        formData.price
+                                    }
+                                    placeholder="0.00"
+                                    onChange={
+                                        handleChange
+                                    }
+                                />
+
+                            </div>
+
+                            {/* ==============================
+                                STOCK
+                               ============================== */}
+
+                            <div className="admin-form-group">
+
+                                <label
+                                    htmlFor="stockQuantity"
+                                >
+                                    Stock Quantity
+                                </label>
+
+                                <input
+                                    id="stockQuantity"
+                                    name="stockQuantity"
+                                    type="number"
+                                    min="0"
+                                    value={
+                                        formData.stockQuantity
+                                    }
+                                    placeholder="0"
+                                    onChange={
+                                        handleChange
+                                    }
+                                />
+
+                            </div>
+
+                            {/* ==============================
+                                DESCRIPTION
+                               ============================== */}
+
+                            <div className="admin-form-group full-width">
+
+                                <label
+                                    htmlFor="description"
+                                >
+                                    Description
+                                </label>
+
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    value={
+                                        formData.description
+                                    }
+                                    placeholder="Enter product description"
+                                    rows="4"
+                                    onChange={
+                                        handleChange
+                                    }
+                                />
+
+                            </div>
+
+                        </div>
+
+                        {/* ==================================
+                            FORM ACTIONS
+                           ================================== */}
+
+                        <div className="admin-product-form-actions">
+
+                            {editingProductId && (
+
+                                <button
+                                    type="button"
+                                    className="admin-product-cancel-button"
+                                    onClick={
+                                        resetForm
+                                    }
+                                >
+                                    Cancel Edit
+                                </button>
+
+                            )}
+
+                            <button
+                                type="submit"
+                                className="admin-product-save-button"
+                                disabled={saving}
+                            >
+                                {
+                                    saving
+                                        ? 'Saving...'
+                                        : editingProductId
+                                            ? 'Update Product'
+                                            : 'Create Product'
+                                }
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </section>
+
+                {/* ==============================================
+                    PRODUCTS LIST
+                   ============================================== */}
+
+                <section className="admin-products-list-section">
+
+                    <div className="admin-products-list-header">
+
+                        <div>
+
+                            <span>
+                                Catalog
+                            </span>
+
+                            <h2>
+                                Products
+                            </h2>
+
+                        </div>
+
+                        <span className="admin-products-total">
+                            {products.length}
+                            {' '}
+                            {
+                                products.length === 1
+                                    ? 'product'
+                                    : 'products'
+                            }
+                        </span>
+
+                    </div>
+
+                    {/* ==========================================
+                        SEARCH
+                       ========================================== */}
+
+                    <div className="admin-products-toolbar">
+
+                        <div className="admin-products-search">
+
+                            <input
+                                type="search"
+                                value={search}
+                                placeholder="Search by product, SKU or category..."
+                                onChange={
+                                    event =>
+                                        setSearch(
+                                            event.target.value
+                                        )
+                                }
+                            />
+
+                            {search && (
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSearch('')
+                                    }
+                                >
+                                    ×
+                                </button>
+
+                            )}
+
+                        </div>
+
+                        <span className="admin-products-showing">
+
+                            Showing{' '}
+
+                            <strong>
+                                {
+                                    filteredProducts.length
+                                }
+                            </strong>
+
+                            {' '}of{' '}
+
+                            {products.length}
+
+                        </span>
+
+                    </div>
+
+                    {/* ==========================================
+                        LOADING
+                       ========================================== */}
+
+                    {loading ? (
+
+                        <div className="admin-products-loading">
+
+                            <div className="admin-products-spinner" />
+
+                            <p>
+                                Loading products...
+                            </p>
+
+                        </div>
+
+                    ) : filteredProducts.length === 0 ? (
+
+                        <div className="admin-products-empty">
+
+                            <h3>
+                                No products found
+                            </h3>
+
+                            <p>
+                                Try another search term
+                                or create a new product.
+                            </p>
+
+                        </div>
+
+                    ) : (
+
+                        <div className="admin-products-table-wrapper">
+
+                            <table className="admin-products-table">
+
+                                <thead>
+
+                                    <tr>
+
+                                        <th>
+                                            Product
+                                        </th>
+
+                                        <th>
+                                            SKU
+                                        </th>
+
+                                        <th>
+                                            Category
+                                        </th>
+
+                                        <th>
+                                            Price
+                                        </th>
+
+                                        <th>
+                                            Stock
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                        <th>
+                                            Actions
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {filteredProducts.map(
+                                        product => {
+
+                                            const stockStatus =
+                                                getStockStatus(
+                                                    product.stockQuantity
+                                                )
+
+                                            return (
+
+                                                <tr
+                                                    key={
+                                                        product.id
+                                                    }
+                                                >
+
+                                                    <td
+                                                        data-label="Product"
+                                                    >
+
+                                                        <div className="admin-product-name-cell">
+
+                                                            <div className="admin-product-avatar">
+
+                                                                {product.name
+                                                                    ?.charAt(0)
+                                                                    .toUpperCase()
+                                                                    || 'P'}
+
+                                                            </div>
+
+                                                            <div>
+
+                                                                <strong>
+                                                                    {
+                                                                        product.name
+                                                                    }
+                                                                </strong>
+
+                                                                <span>
+                                                                    {
+                                                                        product.description ||
+                                                                        'No description'
+                                                                    }
+                                                                </span>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="SKU"
+                                                        className="admin-product-sku"
+                                                    >
+                                                        {product.sku}
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Category"
+                                                    >
+                                                        {
+                                                            getCategoryName(
+                                                                product.categoryId
+                                                            )
+                                                        }
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Price"
+                                                    >
+                                                        ₹{formatPrice(
+                                                            product.price
+                                                        )}
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Stock"
+                                                    >
+                                                        <strong>
+                                                            {
+                                                                product.stockQuantity
+                                                            }
+                                                        </strong>
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Status"
+                                                    >
+
+                                                        <span
+                                                            className={
+                                                                `admin-product-status ${stockStatus.className}`
+                                                            }
+                                                        >
+                                                            {
+                                                                stockStatus.label
+                                                            }
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Actions"
+                                                    >
+
+                                                        <div className="admin-product-actions">
+
+                                                            <button
+                                                                type="button"
+                                                                className="admin-product-edit-button"
+                                                                onClick={() =>
+                                                                    handleEdit(
+                                                                        product
+                                                                    )
+                                                                }
+                                                            >
+                                                                Edit
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                className="admin-product-deactivate-button"
+                                                                onClick={() =>
+                                                                    handleDeactivate(
+                                                                        product.id
+                                                                    )
+                                                                }
+                                                            >
+                                                                Deactivate
+                                                            </button>
+
+                                                        </div>
+
+                                                    </td>
+
+                                                </tr>
+
+                                            )
+                                        }
+                                    )}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    )}
+
+                </section>
+
+            </div>
+
+        </main>
     )
 }
 

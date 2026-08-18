@@ -433,3 +433,7 @@ using (var scope =
 // ============================================================
 
 app.Run();
+
+public partial class Program
+{
+}

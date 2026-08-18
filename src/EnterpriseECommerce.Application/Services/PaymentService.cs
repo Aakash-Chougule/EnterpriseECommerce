@@ -1,6 +1,9 @@
 using EnterpriseECommerce.Application.DTOs;
+using EnterpriseECommerce.Application.Events;
 using EnterpriseECommerce.Application.Interfaces;
 using EnterpriseECommerce.Domain.Entities;
+
+using Microsoft.Extensions.Configuration;
 
 namespace EnterpriseECommerce.Application.Services;
 
@@ -8,16 +11,29 @@ public class PaymentService
 {
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IKafkaProducer _kafkaProducer;
+    private readonly IConfiguration _configuration;
+
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
 
     public PaymentService(
         IPaymentRepository paymentRepository,
         IOrderRepository orderRepository,
-        IUnitOfWork unitOfWork)
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork,
+        IKafkaProducer kafkaProducer,
+        IConfiguration configuration)
     {
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
+        _kafkaProducer = kafkaProducer;
+        _configuration = configuration;
     }
 
     // ============================================================
@@ -28,11 +44,19 @@ public class PaymentService
         Guid userId,
         CreatePaymentRequest request)
     {
+        // --------------------------------------------------------
+        // Validate user
+        // --------------------------------------------------------
+
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
                 "UserId is required.");
         }
+
+        // --------------------------------------------------------
+        // Validate request
+        // --------------------------------------------------------
 
         if (request is null)
         {
@@ -53,8 +77,14 @@ public class PaymentService
                 "Payment method is required.");
         }
 
-        var order = await _orderRepository
-            .GetByIdAsync(request.OrderId);
+        // --------------------------------------------------------
+        // Load order
+        // --------------------------------------------------------
+
+        var order =
+            await _orderRepository
+                .GetByIdAsync(
+                    request.OrderId);
 
         if (order is null ||
             order.UserId != userId)
@@ -63,9 +93,14 @@ public class PaymentService
                 "Order not found.");
         }
 
+        // --------------------------------------------------------
+        // Prevent duplicate payments
+        // --------------------------------------------------------
+
         var existingPayment =
             await _paymentRepository
-                .GetByOrderIdAsync(order.Id);
+                .GetByOrderIdAsync(
+                    order.Id);
 
         if (existingPayment is not null)
         {
@@ -73,10 +108,15 @@ public class PaymentService
                 "Payment already exists for this order.");
         }
 
-        var payment = new Payment(
-            order.Id,
-            order.TotalAmount,
-            request.PaymentMethod);
+        // --------------------------------------------------------
+        // Create payment
+        // --------------------------------------------------------
+
+        var payment =
+            new Payment(
+                order.Id,
+                order.TotalAmount,
+                request.PaymentMethod.Trim());
 
         await _paymentRepository
             .AddAsync(payment);
@@ -93,6 +133,10 @@ public class PaymentService
             Guid userId,
             Guid orderId)
     {
+        // --------------------------------------------------------
+        // Validation
+        // --------------------------------------------------------
+
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
@@ -105,8 +149,13 @@ public class PaymentService
                 "OrderId is required.");
         }
 
-        var order = await _orderRepository
-            .GetByIdAsync(orderId);
+        // --------------------------------------------------------
+        // Verify order ownership
+        // --------------------------------------------------------
+
+        var order =
+            await _orderRepository
+                .GetByIdAsync(orderId);
 
         if (order is null ||
             order.UserId != userId)
@@ -114,8 +163,14 @@ public class PaymentService
             return null;
         }
 
-        var payment = await _paymentRepository
-            .GetByOrderIdAsync(orderId);
+        // --------------------------------------------------------
+        // Load payment
+        // --------------------------------------------------------
+
+        var payment =
+            await _paymentRepository
+                .GetByOrderIdAsync(
+                    orderId);
 
         return payment is null
             ? null
@@ -126,11 +181,16 @@ public class PaymentService
     // PAYMENT SUCCESS
     // ============================================================
 
-    public async Task<PaymentDto> MarkPaymentSuccessfulAsync(
-        Guid userId,
-        Guid paymentId,
-        string transactionId)
+    public async Task<PaymentDto>
+        MarkPaymentSuccessfulAsync(
+            Guid userId,
+            Guid paymentId,
+            string transactionId)
     {
+        // --------------------------------------------------------
+        // Validation
+        // --------------------------------------------------------
+
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
@@ -150,12 +210,43 @@ public class PaymentService
                 "TransactionId is required.");
         }
 
-        await _unitOfWork.BeginTransactionAsync();
+        // --------------------------------------------------------
+        // Kafka topic
+        // --------------------------------------------------------
+
+        var topic =
+            _configuration[
+                "Kafka:PaymentEventsTopic"]
+            ?? throw new InvalidOperationException(
+                "Kafka PaymentEventsTopic is not configured.");
+
+        // --------------------------------------------------------
+        // Variables required after DB commit
+        // --------------------------------------------------------
+
+        Payment? payment = null;
+
+        Order? order = null;
+
+        User? user = null;
+
+        // --------------------------------------------------------
+        // Begin transaction
+        // --------------------------------------------------------
+
+        await _unitOfWork
+            .BeginTransactionAsync();
 
         try
         {
-            var payment = await _paymentRepository
-                .GetByIdAsync(paymentId);
+            // ====================================================
+            // LOAD PAYMENT
+            // ====================================================
+
+            payment =
+                await _paymentRepository
+                    .GetByIdAsync(
+                        paymentId);
 
             if (payment is null)
             {
@@ -163,8 +254,14 @@ public class PaymentService
                     "Payment not found.");
             }
 
-            var order = await _orderRepository
-                .GetByIdAsync(payment.OrderId);
+            // ====================================================
+            // LOAD ORDER
+            // ====================================================
+
+            order =
+                await _orderRepository
+                    .GetByIdAsync(
+                        payment.OrderId);
 
             if (order is null ||
                 order.UserId != userId)
@@ -173,52 +270,148 @@ public class PaymentService
                     "Order not found.");
             }
 
-            // --------------------------------------------
-            // Update payment
-            // --------------------------------------------
+            // ====================================================
+            // LOAD CUSTOMER
+            // ====================================================
+
+            user =
+                await _userRepository
+                    .GetByIdAsync(
+                        userId);
+
+            if (user is null)
+            {
+                throw new KeyNotFoundException(
+                    "User not found.");
+            }
+
+            if (!user.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "Inactive users cannot complete payments.");
+            }
+
+            // ====================================================
+            // UPDATE PAYMENT
+            // ====================================================
 
             payment.MarkSuccessful(
-                transactionId);
+                transactionId.Trim());
 
             await _paymentRepository
                 .UpdateAsync(payment);
 
-            // --------------------------------------------
-            // Update order payment status
-            // --------------------------------------------
+            // ====================================================
+            // UPDATE ORDER PAYMENT STATUS
+            // ====================================================
 
             order.MarkPaymentSuccessful();
 
             await _orderRepository
                 .UpdateAsync(order);
 
-            // --------------------------------------------
-            // Commit both changes together
-            // --------------------------------------------
+            // ====================================================
+            // COMMIT DATABASE TRANSACTION
+            // ====================================================
 
             await _unitOfWork
                 .CommitTransactionAsync();
-
-            return MapToDto(payment);
         }
         catch
         {
+            // ====================================================
+            // ROLLBACK
+            // ====================================================
+
             await _unitOfWork
                 .RollbackTransactionAsync();
 
             throw;
         }
+
+        // --------------------------------------------------------
+        // Ensure required objects exist after successful commit
+        // --------------------------------------------------------
+
+        if (payment is null ||
+            order is null ||
+            user is null)
+        {
+            throw new InvalidOperationException(
+                "Payment processing failed.");
+        }
+
+        // ============================================================
+        // CREATE PAYMENT SUCCEEDED EVENT
+        // ============================================================
+
+        var paymentSucceededEvent =
+            new PaymentSucceededEvent
+            {
+                PaymentId =
+                    payment.Id,
+
+                OrderId =
+                    order.Id,
+
+                OrderNumber =
+                    order.OrderNumber,
+
+                UserId =
+                    order.UserId,
+
+                CustomerEmail =
+                    user.Email,
+
+                CustomerName =
+                    $"{user.FirstName} {user.LastName}"
+                        .Trim(),
+
+                Amount =
+                    payment.Amount,
+
+                PaymentMethod =
+                    payment.PaymentMethod,
+
+                TransactionId =
+                    payment.TransactionId
+                    ?? transactionId.Trim(),
+
+                PaidAt =
+                    payment.UpdatedAt
+                    ?? DateTime.UtcNow
+            };
+
+        // ============================================================
+        // PUBLISH EVENT AFTER DATABASE COMMIT
+        // ============================================================
+
+        await _kafkaProducer
+            .PublishAsync(
+                topic,
+                paymentSucceededEvent);
+
+        // ============================================================
+        // RETURN PAYMENT
+        // ============================================================
+
+        return MapToDto(payment);
     }
 
     // ============================================================
     // PAYMENT FAILED
     // ============================================================
 
-    public async Task<PaymentDto> MarkPaymentFailedAsync(
-        Guid userId,
-        Guid paymentId,
-        string? reason)
+    public async Task<PaymentDto>
+        MarkPaymentFailedAsync(
+            Guid userId,
+            Guid paymentId,
+            string? reason)
     {
+        // --------------------------------------------------------
+        // Validation
+        // --------------------------------------------------------
+
         if (userId == Guid.Empty)
         {
             throw new ArgumentException(
@@ -231,12 +424,23 @@ public class PaymentService
                 "PaymentId is required.");
         }
 
-        await _unitOfWork.BeginTransactionAsync();
+        // --------------------------------------------------------
+        // Begin transaction
+        // --------------------------------------------------------
+
+        await _unitOfWork
+            .BeginTransactionAsync();
 
         try
         {
-            var payment = await _paymentRepository
-                .GetByIdAsync(paymentId);
+            // ====================================================
+            // LOAD PAYMENT
+            // ====================================================
+
+            var payment =
+                await _paymentRepository
+                    .GetByIdAsync(
+                        paymentId);
 
             if (payment is null)
             {
@@ -244,8 +448,14 @@ public class PaymentService
                     "Payment not found.");
             }
 
-            var order = await _orderRepository
-                .GetByIdAsync(payment.OrderId);
+            // ====================================================
+            // LOAD ORDER
+            // ====================================================
+
+            var order =
+                await _orderRepository
+                    .GetByIdAsync(
+                        payment.OrderId);
 
             if (order is null ||
                 order.UserId != userId)
@@ -254,27 +464,28 @@ public class PaymentService
                     "Order not found.");
             }
 
-            // --------------------------------------------
-            // Update payment
-            // --------------------------------------------
+            // ====================================================
+            // UPDATE PAYMENT
+            // ====================================================
 
-            payment.MarkFailed(reason);
+            payment.MarkFailed(
+                reason?.Trim());
 
             await _paymentRepository
                 .UpdateAsync(payment);
 
-            // --------------------------------------------
-            // Update order payment status
-            // --------------------------------------------
+            // ====================================================
+            // UPDATE ORDER PAYMENT STATUS
+            // ====================================================
 
             order.MarkPaymentFailed();
 
             await _orderRepository
                 .UpdateAsync(order);
 
-            // --------------------------------------------
-            // Commit both changes
-            // --------------------------------------------
+            // ====================================================
+            // COMMIT
+            // ====================================================
 
             await _unitOfWork
                 .CommitTransactionAsync();
@@ -283,6 +494,10 @@ public class PaymentService
         }
         catch
         {
+            // ====================================================
+            // ROLLBACK
+            // ====================================================
+
             await _unitOfWork
                 .RollbackTransactionAsync();
 

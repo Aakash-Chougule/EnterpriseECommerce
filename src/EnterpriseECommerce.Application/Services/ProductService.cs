@@ -9,14 +9,15 @@ namespace EnterpriseECommerce.Application.Services;
 ///
 /// Responsibilities:
 /// - Retrieve active products
-/// - Create new products
+/// - Retrieve all products for Admin
+/// - Retrieve low-stock products
+/// - Create products
 /// - Reactivate inactive products with the same SKU
 /// - Update products
+/// - Increase inventory stock
+/// - Decrease inventory stock
 /// - Soft-deactivate products
 /// - Map Product entities to ProductDto
-///
-/// Controllers should delegate business operations to this service
-/// rather than directly accessing repositories or the database.
 /// </summary>
 public class ProductService
 {
@@ -63,8 +64,6 @@ public class ProductService
             await _productRepository
                 .GetByIdAsync(id);
 
-        // Normal customer/product API should not expose
-        // inactive products.
         if (product is null ||
             !product.IsActive)
         {
@@ -78,17 +77,14 @@ public class ProductService
     // CREATE PRODUCT
     // ============================================================
     //
-    // Behavior:
-    //
     // New SKU
-    //     → Create new product.
+    //     → Create product
     //
-    // Existing ACTIVE SKU
-    //     → Reject duplicate.
+    // Existing active SKU
+    //     → Reject duplicate
     //
-    // Existing INACTIVE SKU
-    //     → Restore/reactivate old product instead of
-    //       creating a duplicate database row.
+    // Existing inactive SKU
+    //     → Reactivate existing product
     // ============================================================
 
     public async Task<ProductDto> CreateProductAsync(
@@ -96,10 +92,6 @@ public class ProductService
     {
         ArgumentNullException.ThrowIfNull(
             request);
-
-        // --------------------------------------------------------
-        // Validation
-        // --------------------------------------------------------
 
         if (request.CategoryId ==
             Guid.Empty)
@@ -144,13 +136,6 @@ public class ProductService
         var normalizedSku =
             request.SKU.Trim();
 
-        // --------------------------------------------------------
-        // Check whether SKU already exists.
-        //
-        // GetBySkuAsync must return both active and inactive
-        // products.
-        // --------------------------------------------------------
-
         var existingProduct =
             await _productRepository
                 .GetBySkuAsync(
@@ -158,21 +143,11 @@ public class ProductService
 
         if (existingProduct is not null)
         {
-            // ----------------------------------------------------
-            // Same SKU already belongs to an ACTIVE product.
-            // ----------------------------------------------------
-
             if (existingProduct.IsActive)
             {
                 throw new InvalidOperationException(
                     "A product with this SKU already exists.");
             }
-
-            // ----------------------------------------------------
-            // Same SKU exists but product is INACTIVE.
-            //
-            // Restore the existing record.
-            // ----------------------------------------------------
 
             existingProduct.UpdateCategory(
                 request.CategoryId);
@@ -196,10 +171,6 @@ public class ProductService
             return MapToDto(
                 existingProduct);
         }
-
-        // --------------------------------------------------------
-        // Completely new SKU.
-        // --------------------------------------------------------
 
         var product =
             new Product(
@@ -237,16 +208,11 @@ public class ProductService
             await _productRepository
                 .GetByIdAsync(id);
 
-        // Product does not exist or has been deactivated.
         if (product is null ||
             !product.IsActive)
         {
             return null;
         }
-
-        // --------------------------------------------------------
-        // Domain methods enforce product rules.
-        // --------------------------------------------------------
 
         product.UpdateDetails(
             request.Name,
@@ -258,9 +224,105 @@ public class ProductService
         product.UpdateStock(
             request.StockQuantity);
 
-        // --------------------------------------------------------
-        // Persist changes.
-        // --------------------------------------------------------
+        await _productRepository
+            .UpdateAsync(product);
+
+        return MapToDto(product);
+    }
+
+    // ============================================================
+    // ADMIN - INCREASE STOCK
+    // ============================================================
+    //
+    // Adds inventory to an active product.
+    //
+    // Example:
+    //
+    // Current stock = 10
+    // Quantity      = 5
+    //
+    // New stock     = 15
+    // ============================================================
+
+    public async Task<ProductDto>
+        IncreaseProductStockAsync(
+            Guid productId,
+            int quantity)
+    {
+        if (productId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "ProductId is required.");
+        }
+
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "Quantity must be greater than zero.");
+        }
+
+        var product =
+            await _productRepository
+                .GetByIdAsync(productId);
+
+        if (product is null ||
+            !product.IsActive)
+        {
+            throw new KeyNotFoundException(
+                "Product not found.");
+        }
+
+        product.IncreaseStock(
+            quantity);
+
+        await _productRepository
+            .UpdateAsync(product);
+
+        return MapToDto(product);
+    }
+
+    // ============================================================
+    // ADMIN - DECREASE STOCK
+    // ============================================================
+    //
+    // Removes inventory from an active product.
+    //
+    // Product.ReduceStock() prevents stock from becoming
+    // negative.
+    // ============================================================
+
+    public async Task<ProductDto>
+        DecreaseProductStockAsync(
+            Guid productId,
+            int quantity)
+    {
+        if (productId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "ProductId is required.");
+        }
+
+        if (quantity <= 0)
+        {
+            throw new ArgumentException(
+                "Quantity must be greater than zero.");
+        }
+
+        var product =
+            await _productRepository
+                .GetByIdAsync(productId);
+
+        if (product is null ||
+            !product.IsActive)
+        {
+            throw new KeyNotFoundException(
+                "Product not found.");
+        }
+
+        // Product domain method checks whether enough
+        // stock is available.
+        product.ReduceStock(
+            quantity);
 
         await _productRepository
             .UpdateAsync(product);
@@ -270,14 +332,6 @@ public class ProductService
 
     // ============================================================
     // DEACTIVATE PRODUCT
-    // ============================================================
-    //
-    // Soft delete:
-    //
-    // IsActive = false
-    //
-    // Product remains in PostgreSQL so historical order data and
-    // references remain valid.
     // ============================================================
 
     public async Task<bool>
@@ -306,11 +360,12 @@ public class ProductService
 
         return true;
     }
+
     // ============================================================
     // ADMIN - GET ALL PRODUCTS
     // ============================================================
     //
-    // Returns both active and inactive products.
+    // Returns active + inactive products.
     // ============================================================
 
     public async Task<IReadOnlyList<ProductDto>>
@@ -326,7 +381,35 @@ public class ProductService
     }
 
     // ============================================================
-    // ENTITY → DTO MAPPING
+    // ADMIN - GET LOW STOCK PRODUCTS
+    // ============================================================
+
+    public async Task<IReadOnlyList<ProductDto>>
+        GetLowStockProductsAsync(
+            int threshold = 5)
+    {
+        if (threshold < 0)
+        {
+            throw new ArgumentException(
+                "Low stock threshold cannot be negative.");
+        }
+
+        var products =
+            await _productRepository
+                .GetAllAsync();
+
+        return products
+            .Where(product =>
+                product.IsActive &&
+                product.StockQuantity <= threshold)
+            .OrderBy(product =>
+                product.StockQuantity)
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    // ============================================================
+    // ENTITY → DTO
     // ============================================================
 
     private static ProductDto MapToDto(

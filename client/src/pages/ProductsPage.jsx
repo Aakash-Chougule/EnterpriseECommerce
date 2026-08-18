@@ -1,5 +1,6 @@
 import {
     useEffect,
+    useMemo,
     useState
 } from 'react'
 
@@ -13,85 +14,47 @@ import {
 
 import ProductCard from '../components/ProductCard'
 
+import './ProductsPage.css'
+
 // ============================================================
 // PRODUCTS PAGE
-// ============================================================
-//
-// This page:
-// 1. Loads products from the ASP.NET API.
-// 2. Displays them using ProductCard.
-// 3. Allows the authenticated user to add products to the cart.
 // ============================================================
 
 function ProductsPage() {
 
-    // ----------------------------------------------------------
-    // PRODUCTS STATE
-    // ----------------------------------------------------------
-    //
-    // Stores the list of products returned by the backend.
-    // ----------------------------------------------------------
-
     const [products, setProducts] =
         useState([])
-
-    // ----------------------------------------------------------
-    // LOADING STATE
-    // ----------------------------------------------------------
-    //
-    // Used while products are being loaded from the API.
-    // ----------------------------------------------------------
 
     const [loading, setLoading] =
         useState(true)
 
-    // ----------------------------------------------------------
-    // ERROR STATE
-    // ----------------------------------------------------------
-    //
-    // Stores an error message if an API request fails.
-    // ----------------------------------------------------------
-
     const [error, setError] =
         useState('')
 
-    // ----------------------------------------------------------
-    // SUCCESS MESSAGE
-    // ----------------------------------------------------------
-    //
-    // Example:
-    // "Mechanical Keyboard added to cart."
-    // ----------------------------------------------------------
-
     const [message, setMessage] =
         useState('')
-
-    // ----------------------------------------------------------
-    // ADDING PRODUCT STATE
-    // ----------------------------------------------------------
-    //
-    // Stores the ID of the product currently being added.
-    //
-    // This allows only that product's button to show:
-    //
-    // Adding...
-    // ----------------------------------------------------------
 
     const [
         addingProductId,
         setAddingProductId
     ] = useState(null)
 
-    // ==========================================================
+    // ========================================================
+    // SEARCH
+    // ========================================================
+
+    const [searchTerm, setSearchTerm] =
+        useState('')
+
+    // ========================================================
     // LOAD PRODUCTS
-    // ==========================================================
+    // ========================================================
 
     const loadProducts = async () => {
 
         try {
 
             setLoading(true)
-
             setError('')
 
             const data =
@@ -112,6 +75,7 @@ function ProductsPage() {
             )
 
             setError(
+                err.response?.data?.message ||
                 'Unable to load products.'
             )
         }
@@ -121,51 +85,29 @@ function ProductsPage() {
         }
     }
 
-    // ==========================================================
-    // ADD PRODUCT TO CART
-    // ==========================================================
-    //
-    // This function is passed to ProductCard as a prop.
-    //
-    // When the user clicks "Add to Cart", ProductCard sends
-    // the selected product back to this function.
-    // ==========================================================
+    // ========================================================
+    // ADD TO CART
+    // ========================================================
 
     const handleAddToCart =
         async (product) => {
 
             try {
 
-                // Clear old messages.
                 setMessage('')
                 setError('')
 
-                // Remember which product is being added.
                 setAddingProductId(
                     product.id
                 )
-
-                // ------------------------------------------------------
-                // Call ASP.NET Cart API
-                // ------------------------------------------------------
-                //
-                // For now every click adds quantity = 1.
-                //
-                // Later we can add:
-                // - Quantity selector
-                // - Plus/minus buttons
-                // - Stock validation in the UI
-                // ------------------------------------------------------
 
                 await addItemToCart(
                     product.id,
                     1
                 )
 
-                // Show success message.
-
                 setMessage(
-                    `${product.name} added to cart.`
+                    `${product.name} added to cart successfully.`
                 )
             }
             catch (err) {
@@ -175,34 +117,65 @@ function ProductsPage() {
                     err
                 )
 
-                // Try to use the backend error message first.
-                // If the backend does not return one, use our
-                // frontend fallback message.
-
                 const errorMessage =
                     err.response?.data?.message ||
                     'Unable to add product to cart.'
 
-                setError(
-                    errorMessage
-                )
+                setError(errorMessage)
             }
             finally {
-
-                // Re-enable the Add to Cart button.
 
                 setAddingProductId(null)
             }
         }
 
-    // ==========================================================
-    // USE EFFECT
-    // ==========================================================
-    //
-    // The empty [] means:
-    //
-    // Run loadProducts() once when ProductsPage first appears.
-    // ==========================================================
+    // ========================================================
+    // FILTER PRODUCTS
+    // ========================================================
+
+    const filteredProducts =
+        useMemo(() => {
+
+            const search =
+                searchTerm
+                    .trim()
+                    .toLowerCase()
+
+            if (!search) {
+                return products
+            }
+
+            return products.filter(
+                (product) => {
+
+                    const name =
+                        product.name
+                            ?.toLowerCase() ||
+                        ''
+
+                    const description =
+                        product.description
+                            ?.toLowerCase() ||
+                        ''
+
+                    const sku =
+                        product.sku
+                            ?.toLowerCase() ||
+                        ''
+
+                    return (
+                        name.includes(search) ||
+                        description.includes(search) ||
+                        sku.includes(search)
+                    )
+                }
+            )
+
+        }, [products, searchTerm])
+
+    // ========================================================
+    // LOAD ON PAGE START
+    // ========================================================
 
     useEffect(() => {
 
@@ -210,96 +183,290 @@ function ProductsPage() {
 
     }, [])
 
-    // ==========================================================
-    // LOADING UI
-    // ==========================================================
+    // ========================================================
+    // LOADING
+    // ========================================================
 
     if (loading) {
 
         return (
-            <div>
 
-                <h1>
-                    Products
-                </h1>
+            <main className="products-page">
 
-                <p>
-                    Loading products...
-                </p>
+                <div className="products-container">
 
-            </div>
-        )
-    }
+                    <div className="products-loading">
 
-    // ==========================================================
-    // MAIN UI
-    // ==========================================================
+                        <div className="products-spinner" />
 
-    return (
-        <div>
+                        <h2>
+                            Loading products
+                        </h2>
 
-            <h1>
-                Products
-            </h1>
+                        <p>
+                            Please wait while we load
+                            the latest products.
+                        </p>
 
-            {/* ------------------------------------------------------
-          Success message
-         ------------------------------------------------------ */}
-
-            {message && (
-                <p>
-                    {message}
-                </p>
-            )}
-
-            {/* ------------------------------------------------------
-          Error message
-         ------------------------------------------------------ */}
-
-            {error && (
-                <p>
-                    {error}
-                </p>
-            )}
-
-            {/* ------------------------------------------------------
-          Product list
-         ------------------------------------------------------ */}
-
-            {products.length === 0 ? (
-
-                <p>
-                    No products are currently available.
-                </p>
-
-            ) : (
-
-                <div>
-
-                    {products.map((product) => (
-
-                        <ProductCard
-                            key={product.id}
-
-                            product={product}
-
-                            onAddToCart={
-                                handleAddToCart
-                            }
-
-                            adding={
-                                addingProductId ===
-                                product.id
-                            }
-                        />
-
-                    ))}
+                    </div>
 
                 </div>
 
-            )}
+            </main>
+        )
+    }
 
-        </div>
+    // ========================================================
+    // UI
+    // ========================================================
+
+    return (
+
+        <main className="products-page">
+
+            <div className="products-container">
+
+                {/* ==================================================
+                    PAGE HEADER
+                   ================================================== */}
+
+                <section className="products-header">
+
+                    <div>
+
+                        <span className="products-eyebrow">
+                            Our Collection
+                        </span>
+
+                        <h1>
+                            Explore Products
+                        </h1>
+
+                        <p>
+                            Browse our available products
+                            and add your favorites to the cart.
+                        </p>
+
+                    </div>
+
+                    <div className="products-count">
+
+                        <strong>
+                            {products.length}
+                        </strong>
+
+                        <span>
+                            {
+                                products.length === 1
+                                    ? 'Product'
+                                    : 'Products'
+                            }
+                        </span>
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
+                    MESSAGES
+                   ================================================== */}
+
+                {message && (
+
+                    <div className="products-alert products-alert-success">
+
+                        <span className="products-alert-icon">
+                            ✓
+                        </span>
+
+                        <span>
+                            {message}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setMessage('')
+                            }
+                            aria-label="Close message"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                )}
+
+                {error && (
+
+                    <div className="products-alert products-alert-error">
+
+                        <span className="products-alert-icon">
+                            !
+                        </span>
+
+                        <span>
+                            {error}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setError('')
+                            }
+                            aria-label="Close error"
+                        >
+                            ×
+                        </button>
+
+                    </div>
+
+                )}
+
+                {/* ==================================================
+                    TOOLBAR
+                   ================================================== */}
+
+                <section className="products-toolbar">
+
+                    <div className="products-search">
+
+                        <span className="products-search-icon">
+                            ⌕
+                        </span>
+
+                        <input
+                            type="search"
+                            value={searchTerm}
+                            placeholder="Search products by name, SKU..."
+                            onChange={
+                                (event) =>
+                                    setSearchTerm(
+                                        event.target.value
+                                    )
+                            }
+                        />
+
+                        {searchTerm && (
+
+                            <button
+                                type="button"
+                                className="products-clear-search"
+                                onClick={() =>
+                                    setSearchTerm('')
+                                }
+                                aria-label="Clear search"
+                            >
+                                ×
+                            </button>
+
+                        )}
+
+                    </div>
+
+                    <div className="products-result-count">
+
+                        Showing
+
+                        {' '}
+
+                        <strong>
+                            {filteredProducts.length}
+                        </strong>
+
+                        {' '}
+
+                        of
+
+                        {' '}
+
+                        {products.length}
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
+                    PRODUCTS
+                   ================================================== */}
+
+                {products.length === 0 ? (
+
+                    <section className="products-empty">
+
+                        <div className="products-empty-icon">
+                            □
+                        </div>
+
+                        <h2>
+                            No products available
+                        </h2>
+
+                        <p>
+                            There are currently no products
+                            available in the store.
+                        </p>
+
+                    </section>
+
+                ) : filteredProducts.length === 0 ? (
+
+                    <section className="products-empty">
+
+                        <div className="products-empty-icon">
+                            ⌕
+                        </div>
+
+                        <h2>
+                            No matching products
+                        </h2>
+
+                        <p>
+                            We couldn't find any products
+                            matching "{searchTerm}".
+                        </p>
+
+                        <button
+                            type="button"
+                            className="products-reset-button"
+                            onClick={() =>
+                                setSearchTerm('')
+                            }
+                        >
+                            Clear Search
+                        </button>
+
+                    </section>
+
+                ) : (
+
+                    <section className="products-grid">
+
+                        {filteredProducts.map(
+                            (product) => (
+
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onAddToCart={
+                                        handleAddToCart
+                                    }
+                                    adding={
+                                        addingProductId ===
+                                        product.id
+                                    }
+                                />
+
+                            )
+                        )}
+
+                    </section>
+
+                )}
+
+            </div>
+
+        </main>
     )
 }
 

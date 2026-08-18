@@ -1,0 +1,793 @@
+/* ============================================================
+   ADMIN DATA PAGE
+   ============================================================ */
+
+.admin-data-page {
+    min-height: calc(100vh - 70px);
+    padding: 42px 24px 70px;
+    background: #f8fafc;
+}
+
+.admin-data-container {
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.admin-data-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 25px;
+    margin-bottom: 28px;
+}
+
+.admin-data-eyebrow {
+    display: block;
+    margin-bottom: 6px;
+    color: #2563eb;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.admin-data-header h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.15;
+}
+
+.admin-data-header p {
+    max-width: 650px;
+    margin: 9px 0 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.admin-data-record-count {
+    min-width: 110px;
+    padding: 14px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    background: #ffffff;
+    text-align: center;
+}
+
+    .admin-data-record-count strong {
+        display: block;
+        color: #0f172a;
+        font-size: 24px;
+    }
+
+    .admin-data-record-count span {
+        color: #64748b;
+        font-size: 9px;
+    }
+
+
+/* ============================================================
+   SUMMARY
+   ============================================================ */
+
+.admin-data-summary {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 11px;
+    margin-bottom: 28px;
+}
+
+.admin-data-summary-card {
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-top: 3px solid #64748b;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+    .admin-data-summary-card.active {
+        border-top-color: #16a34a;
+    }
+
+    .admin-data-summary-card.inactive {
+        border-top-color: #f59e0b;
+    }
+
+    .admin-data-summary-card > span {
+        color: #64748b;
+        font-size: 9px;
+        font-weight: 700;
+    }
+
+    .admin-data-summary-card strong {
+        display: block;
+        margin: 5px 0 2px;
+        color: #0f172a;
+        font-size: 23px;
+    }
+
+    .admin-data-summary-card small {
+        color: #94a3b8;
+        font-size: 8px;
+    }
+
+
+/* ============================================================
+   SECTION
+   ============================================================ */
+
+.admin-data-section {
+    margin-bottom: 28px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+}
+
+.admin-data-section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.admin-data-section-label {
+    color: #2563eb;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.admin-data-section-header h2 {
+    margin: 3px 0;
+    color: #0f172a;
+    font-size: 21px;
+}
+
+.admin-data-section-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.admin-data-showing {
+    color: #64748b;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+    .admin-data-showing strong {
+        color: #0f172a;
+    }
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+.admin-data-toolbar {
+    display: grid;
+    grid-template-columns: minmax(250px, 1fr) 170px;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.admin-data-search {
+    position: relative;
+}
+
+.admin-data-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    z-index: 1;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 16px;
+    pointer-events: none;
+}
+
+.admin-data-search input,
+.admin-data-toolbar select {
+    width: 100%;
+    height: 40px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    outline: none;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 10px;
+}
+
+.admin-data-search input {
+    padding: 0 42px 0 37px;
+}
+
+.admin-data-toolbar select {
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+    .admin-data-search input:focus,
+    .admin-data-toolbar select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+    }
+
+.admin-data-search button {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    border: none;
+    border-radius: 50%;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+    .admin-data-search button:hover {
+        background: #cbd5e1;
+    }
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.admin-data-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+}
+
+.admin-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+}
+
+    .admin-data-table th {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: .4px;
+        text-align: left;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .admin-data-table td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #475569;
+        font-size: 9px;
+        vertical-align: middle;
+    }
+
+    .admin-data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .admin-data-table tbody tr {
+        transition: background .15s ease;
+    }
+
+        .admin-data-table tbody tr:hover {
+            background: #fafcff;
+        }
+
+
+/* ============================================================
+   NAME / AVATAR
+   ============================================================ */
+
+.admin-data-name {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 150px;
+}
+
+.admin-data-avatar {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+    .admin-data-avatar.category {
+        background: #f3e8ff;
+        color: #7e22ce;
+    }
+
+    .admin-data-avatar.product {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+.admin-data-name strong {
+    display: block;
+    color: #0f172a;
+    font-size: 10px;
+}
+
+.admin-data-product-description {
+    display: block;
+    max-width: 180px;
+    margin-top: 2px;
+    overflow: hidden;
+    color: #94a3b8;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-data-description {
+    display: block;
+    max-width: 280px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   ID / SKU
+   ============================================================ */
+
+.admin-data-id,
+.admin-data-sku {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+    .admin-data-id code {
+        display: block;
+        max-width: 150px;
+        overflow: hidden;
+        padding: 5px 7px;
+        border-radius: 5px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 7px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .admin-data-sku code {
+        padding: 5px 7px;
+        border-radius: 5px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 8px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .admin-data-id button,
+    .admin-data-sku button {
+        padding: 5px 7px;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background: #ffffff;
+        color: #475569;
+        font-size: 7px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .admin-data-id button:hover,
+        .admin-data-sku button:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+
+
+/* ============================================================
+   CATEGORY
+   ============================================================ */
+
+.admin-data-category-pill {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 8px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   PRICE
+   ============================================================ */
+
+.admin-data-price {
+    color: #0f172a;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   STOCK
+   ============================================================ */
+
+.admin-data-stock {
+    display: inline-flex;
+    min-width: 30px;
+    height: 27px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 7px;
+    border-radius: 6px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+    .admin-data-stock.low {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .admin-data-stock.empty {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.admin-data-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    border-radius: 20px;
+    font-size: 7px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+    .admin-data-status > span {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+    }
+
+    .admin-data-status.active {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+        .admin-data-status.active > span {
+            background: #16a34a;
+        }
+
+    .admin-data-status.inactive {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+        .admin-data-status.inactive > span {
+            background: #dc2626;
+        }
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.admin-data-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 17px;
+    padding: 12px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+}
+
+    .admin-data-error strong {
+        display: block;
+        margin-bottom: 2px;
+        color: #b91c1c;
+        font-size: 10px;
+    }
+
+    .admin-data-error span {
+        color: #dc2626;
+        font-size: 9px;
+    }
+
+    .admin-data-error button {
+        padding: 7px 11px;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #b91c1c;
+        font-size: 8px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.admin-data-empty {
+    padding: 50px 20px;
+    text-align: center;
+}
+
+    .admin-data-empty h3 {
+        margin: 0;
+        color: #0f172a;
+        font-size: 16px;
+    }
+
+    .admin-data-empty p {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 10px;
+    }
+
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.admin-data-loading {
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+.admin-data-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #dbeafe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: admin-data-spin .8s linear infinite;
+}
+
+@keyframes admin-data-spin {
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* ============================================================
+   TABLET
+   ============================================================ */
+
+@media (max-width: 1050px) {
+
+    .admin-data-summary {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+    .admin-data-page {
+        padding: 28px 14px 50px;
+    }
+
+    .admin-data-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-data-record-count {
+        display: none;
+    }
+
+    .admin-data-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-data-section {
+        padding: 17px;
+    }
+
+    .admin-data-section-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-data-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-data-error {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    /* ========================================================
+       RESPONSIVE TABLE -> CARDS
+       ======================================================== */
+
+    .admin-data-table-wrapper {
+        overflow: visible;
+        border: none;
+    }
+
+    .admin-data-table,
+    .admin-data-table tbody,
+    .admin-data-table tr,
+    .admin-data-table td {
+        display: block;
+        width: 100%;
+    }
+
+        .admin-data-table thead {
+            display: none;
+        }
+
+        .admin-data-table tr {
+            box-sizing: border-box;
+            margin-bottom: 12px;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .admin-data-table td {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-sizing: border-box;
+            padding: 9px 0;
+            border-bottom: 1px solid #f1f5f9;
+            text-align: right;
+        }
+
+            .admin-data-table td:last-child {
+                border-bottom: none;
+            }
+
+            .admin-data-table td::before {
+                content: attr(data-label);
+                flex-shrink: 0;
+                color: #64748b;
+                font-size: 8px;
+                font-weight: 800;
+                text-align: left;
+                text-transform: uppercase;
+            }
+
+    .admin-data-name {
+        justify-content: flex-end;
+    }
+
+        .admin-data-name > div:last-child {
+            text-align: right;
+        }
+
+    .admin-data-id,
+    .admin-data-sku {
+        justify-content: flex-end;
+        min-width: 0;
+    }
+
+        .admin-data-id code {
+            max-width: 180px;
+        }
+}
+
+
+/* ============================================================
+   SMALL MOBILE
+   ============================================================ */
+
+@media (max-width: 450px) {
+
+    .admin-data-page {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .admin-data-summary {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .admin-data-summary-card {
+        padding: 13px;
+    }
+
+        .admin-data-summary-card strong {
+            font-size: 20px;
+        }
+
+    .admin-data-section {
+        padding: 14px;
+    }
+
+    .admin-data-table td {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+        text-align: left;
+    }
+
+    .admin-data-name {
+        justify-content: flex-start;
+    }
+
+        .admin-data-name > div:last-child {
+            text-align: left;
+        }
+
+    .admin-data-id,
+    .admin-data-sku {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+        .admin-data-id code {
+            max-width: 220px;
+        }
+
+    .admin-data-product-description {
+        max-width: 230px;
+    }
+}
