@@ -17,40 +17,46 @@ public class Worker : BackgroundService
         IConfiguration configuration,
         IEmailService emailService)
     {
-        _logger = logger;
-        _configuration = configuration;
-        _emailService = emailService;
+        _logger =
+            logger;
+
+        _configuration =
+            configuration;
+
+        _emailService =
+            emailService;
     }
 
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
-        // ========================================================
-        // KAFKA CONFIGURATION
-        // ========================================================
-
         var bootstrapServers =
-            _configuration["Kafka:BootstrapServers"]
+            _configuration[
+                "Kafka:BootstrapServers"]
             ?? throw new InvalidOperationException(
                 "Kafka BootstrapServers is not configured.");
 
         var groupId =
-            _configuration["Kafka:GroupId"]
+            _configuration[
+                "Kafka:GroupId"]
             ?? throw new InvalidOperationException(
                 "Kafka GroupId is not configured.");
 
         var orderTopic =
-            _configuration["Kafka:OrderEventsTopic"]
+            _configuration[
+                "Kafka:OrderEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderEventsTopic is not configured.");
 
         var paymentTopic =
-            _configuration["Kafka:PaymentEventsTopic"]
+            _configuration[
+                "Kafka:PaymentEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka PaymentEventsTopic is not configured.");
 
         var orderStatusTopic =
-            _configuration["Kafka:OrderStatusEventsTopic"]
+            _configuration[
+                "Kafka:OrderStatusEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderStatusEventsTopic is not configured.");
 
@@ -70,18 +76,10 @@ public class Worker : BackgroundService
                     false
             };
 
-        // ========================================================
-        // CREATE CONSUMER
-        // ========================================================
-
         using var consumer =
             new ConsumerBuilder<Ignore, string>(
                 config)
                 .Build();
-
-        // ========================================================
-        // SUBSCRIBE TO ALL NOTIFICATION TOPICS
-        // ========================================================
 
         consumer.Subscribe(
             new[]
@@ -116,9 +114,8 @@ public class Worker : BackgroundService
                         result.Message.Value;
 
                     _logger.LogInformation(
-                        "Kafka message received. Topic: {Topic}, Message: {Message}",
-                        topic,
-                        message);
+                        "Kafka message received. Topic: {Topic}",
+                        topic);
 
                     // ====================================================
                     // ORDER CREATED
@@ -137,7 +134,7 @@ public class Worker : BackgroundService
                     }
 
                     // ====================================================
-                    // PAYMENT SUCCEEDED
+                    // PAYMENT SUCCESS
                     // ====================================================
 
                     if (topic == paymentTopic)
@@ -153,7 +150,7 @@ public class Worker : BackgroundService
                     }
 
                     // ====================================================
-                    // ORDER STATUS CHANGED
+                    // ORDER STATUS
                     // ====================================================
 
                     if (topic == orderStatusTopic)
@@ -168,12 +165,8 @@ public class Worker : BackgroundService
                         continue;
                     }
 
-                    // ====================================================
-                    // UNKNOWN TOPIC
-                    // ====================================================
-
                     _logger.LogWarning(
-                        "Received message from unsupported Kafka topic {Topic}.",
+                        "Unsupported Kafka topic {Topic}.",
                         topic);
 
                     consumer.Commit(
@@ -218,14 +211,14 @@ public class Worker : BackgroundService
     }
 
     // ============================================================
-    // PROCESS ORDER CREATED
+    // ORDER CREATED
     // ============================================================
 
     private async Task ProcessOrderCreatedEventAsync(
         string message,
         CancellationToken cancellationToken)
     {
-        var orderCreatedEvent =
+        var orderEvent =
             JsonSerializer.Deserialize<OrderCreatedEvent>(
                 message,
                 new JsonSerializerOptions
@@ -234,20 +227,20 @@ public class Worker : BackgroundService
                         true
                 });
 
-        if (orderCreatedEvent is null)
+        if (orderEvent is null)
         {
             throw new JsonException(
                 "OrderCreatedEvent could not be deserialized.");
         }
 
-        if (orderCreatedEvent.OrderId == Guid.Empty)
+        if (orderEvent.OrderId == Guid.Empty)
         {
             throw new InvalidOperationException(
                 "OrderCreatedEvent contains an invalid OrderId.");
         }
 
         if (string.IsNullOrWhiteSpace(
-            orderCreatedEvent.CustomerEmail))
+            orderEvent.CustomerEmail))
         {
             throw new InvalidOperationException(
                 "OrderCreatedEvent does not contain a customer email.");
@@ -255,23 +248,23 @@ public class Worker : BackgroundService
 
         await _emailService
             .SendOrderConfirmationAsync(
-                orderCreatedEvent,
+                orderEvent,
                 cancellationToken);
 
         _logger.LogInformation(
-            "OrderCreatedEvent processed successfully for order {OrderNumber}.",
-            orderCreatedEvent.OrderNumber);
+            "Order confirmation processed for {OrderNumber}.",
+            orderEvent.OrderNumber);
     }
 
     // ============================================================
-    // PROCESS PAYMENT SUCCEEDED
+    // PAYMENT SUCCESS
     // ============================================================
 
     private async Task ProcessPaymentSucceededEventAsync(
         string message,
         CancellationToken cancellationToken)
     {
-        var paymentSucceededEvent =
+        var paymentEvent =
             JsonSerializer.Deserialize<PaymentSucceededEvent>(
                 message,
                 new JsonSerializerOptions
@@ -280,43 +273,61 @@ public class Worker : BackgroundService
                         true
                 });
 
-        if (paymentSucceededEvent is null)
+        if (paymentEvent is null)
         {
             throw new JsonException(
                 "PaymentSucceededEvent could not be deserialized.");
         }
 
-        if (paymentSucceededEvent.PaymentId == Guid.Empty)
+        if (paymentEvent.PaymentId == Guid.Empty)
         {
             throw new InvalidOperationException(
                 "PaymentSucceededEvent contains an invalid PaymentId.");
         }
 
-        if (paymentSucceededEvent.OrderId == Guid.Empty)
+        if (paymentEvent.OrderId == Guid.Empty)
         {
             throw new InvalidOperationException(
                 "PaymentSucceededEvent contains an invalid OrderId.");
         }
 
         if (string.IsNullOrWhiteSpace(
-            paymentSucceededEvent.CustomerEmail))
+            paymentEvent.CustomerEmail))
         {
             throw new InvalidOperationException(
                 "PaymentSucceededEvent does not contain a customer email.");
         }
 
+        // --------------------------------------------------------
+        // EXTRA SAFETY
+        //
+        // COD should never generate a successful online payment
+        // notification.
+        // --------------------------------------------------------
+
+        if (paymentEvent.PaymentMethod.Equals(
+            "COD",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Skipping payment success email for COD order {OrderNumber}.",
+                paymentEvent.OrderNumber);
+
+            return;
+        }
+
         await _emailService
             .SendPaymentConfirmationAsync(
-                paymentSucceededEvent,
+                paymentEvent,
                 cancellationToken);
 
         _logger.LogInformation(
-            "PaymentSucceededEvent processed successfully for order {OrderNumber}.",
-            paymentSucceededEvent.OrderNumber);
+            "Payment confirmation processed for {OrderNumber}.",
+            paymentEvent.OrderNumber);
     }
 
     // ============================================================
-    // PROCESS ORDER STATUS CHANGED
+    // ORDER STATUS
     // ============================================================
 
     private async Task ProcessOrderStatusChangedEventAsync(
@@ -358,11 +369,38 @@ public class Worker : BackgroundService
                 "OrderStatusChangedEvent does not contain a new status.");
         }
 
-        _logger.LogInformation(
-            "OrderStatusChangedEvent received. OrderNumber: {OrderNumber}, PreviousStatus: {PreviousStatus}, NewStatus: {NewStatus}",
-            orderStatusEvent.OrderNumber,
-            orderStatusEvent.PreviousStatus,
-            orderStatusEvent.NewStatus);
+        var status =
+            orderStatusEvent.NewStatus
+                .Trim()
+                .ToLowerInvariant();
+
+        // ========================================================
+        // CUSTOMER EMAIL RULE
+        // ========================================================
+        //
+        // Emails:
+        //
+        // Delivered ✅
+        // Cancelled ✅
+        //
+        // No emails:
+        //
+        // Confirmed ❌
+        // Processing ❌
+        // Shipped ❌
+        //
+        // ========================================================
+
+        if (status != "delivered" &&
+            status != "cancelled")
+        {
+            _logger.LogInformation(
+                "No customer email required for status {Status}, order {OrderNumber}.",
+                orderStatusEvent.NewStatus,
+                orderStatusEvent.OrderNumber);
+
+            return;
+        }
 
         await _emailService
             .SendOrderStatusChangedAsync(
@@ -370,8 +408,9 @@ public class Worker : BackgroundService
                 cancellationToken);
 
         _logger.LogInformation(
-            "OrderStatusChangedEvent processed successfully for order {OrderNumber}.",
-            orderStatusEvent.OrderNumber);
+            "Order status email processed for {OrderNumber}. Status: {Status}",
+            orderStatusEvent.OrderNumber,
+            orderStatusEvent.NewStatus);
     }
 }
 
@@ -395,6 +434,9 @@ public class OrderCreatedEvent
         string.Empty;
 
     public decimal TotalAmount { get; set; }
+
+    public string PaymentMethod { get; set; } =
+        string.Empty;
 
     public DateTime CreatedAt { get; set; }
 }

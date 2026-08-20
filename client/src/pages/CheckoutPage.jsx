@@ -24,54 +24,24 @@ import './CheckoutPage.css'
 // ============================================================
 // CHECKOUT PAGE
 // ============================================================
-//
-// Checkout flow:
-//
-// 1. Load user's current cart.
-// 2. User enters shipping address.
-// 3. User selects payment method.
-// 4. Create order.
-// 5. Create payment record.
-// 6. Navigate to Payment page.
-// ============================================================
 
 function CheckoutPage() {
-
-    // ========================================================
-    // ROUTER
-    // ========================================================
 
     const navigate =
         useNavigate()
 
-    // ========================================================
-    // CART
-    // ========================================================
-
     const [cart, setCart] =
         useState(null)
-
-    // ========================================================
-    // SHIPPING ADDRESS
-    // ========================================================
 
     const [
         shippingAddress,
         setShippingAddress
     ] = useState('')
 
-    // ========================================================
-    // PAYMENT METHOD
-    // ========================================================
-
     const [
         paymentMethod,
         setPaymentMethod
     ] = useState('UPI')
-
-    // ========================================================
-    // UI STATE
-    // ========================================================
 
     const [loading, setLoading] =
         useState(true)
@@ -125,10 +95,6 @@ function CheckoutPage() {
 
             event.preventDefault()
 
-            // ------------------------------------------------
-            // Validation
-            // ------------------------------------------------
-
             if (!shippingAddress.trim()) {
 
                 setError(
@@ -153,12 +119,13 @@ function CheckoutPage() {
                 setError('')
 
                 // =============================================
-                // STEP 1 - CREATE ORDER
+                // CREATE ORDER
                 // =============================================
 
                 const order =
                     await createOrder(
-                        shippingAddress.trim()
+                        shippingAddress.trim(),
+                        paymentMethod
                     )
 
                 console.log(
@@ -167,7 +134,7 @@ function CheckoutPage() {
                 )
 
                 // =============================================
-                // STEP 2 - CREATE PAYMENT
+                // CREATE PAYMENT RECORD
                 // =============================================
 
                 const payment =
@@ -182,7 +149,20 @@ function CheckoutPage() {
                 )
 
                 // =============================================
-                // STEP 3 - NAVIGATE TO PAYMENT PAGE
+                // CASH ON DELIVERY
+                // =============================================
+
+                if (paymentMethod === 'COD') {
+
+                    navigate(
+                        `/order-success/${order.id}`
+                    )
+
+                    return
+                }
+
+                // =============================================
+                // ONLINE PAYMENT
                 // =============================================
 
                 navigate(
@@ -196,11 +176,10 @@ function CheckoutPage() {
                     err
                 )
 
-                const message =
+                setError(
                     err.response?.data?.message ||
                     'Checkout failed. Please try again.'
-
-                setError(message)
+                )
             }
             finally {
 
@@ -267,10 +246,6 @@ function CheckoutPage() {
         )
     }
 
-    // ========================================================
-    // CART ITEMS
-    // ========================================================
-
     const items =
         cart?.items ?? []
 
@@ -318,10 +293,6 @@ function CheckoutPage() {
         )
     }
 
-    // ========================================================
-    // CALCULATIONS
-    // ========================================================
-
     const totalItems =
         items.reduce(
             (total, item) =>
@@ -338,10 +309,6 @@ function CheckoutPage() {
         <main className="checkout-page">
 
             <div className="checkout-container">
-
-                {/* ==============================================
-                    HEADER
-                   ============================================== */}
 
                 <header className="checkout-header">
 
@@ -360,10 +327,6 @@ function CheckoutPage() {
 
                 </header>
 
-                {/* ==============================================
-                    ERROR
-                   ============================================== */}
-
                 {error && (
 
                     <div
@@ -375,23 +338,11 @@ function CheckoutPage() {
 
                 )}
 
-                {/* ==============================================
-                    MAIN LAYOUT
-                   ============================================== */}
-
                 <div className="checkout-layout">
-
-                    {/* ==========================================
-                        LEFT SIDE
-                       ========================================== */}
 
                     <section className="checkout-form-section">
 
                         <div className="checkout-card">
-
-                            {/* ==================================
-                                DELIVERY
-                               ================================== */}
 
                             <div className="checkout-section-header">
 
@@ -419,10 +370,6 @@ function CheckoutPage() {
                                 className="checkout-form"
                             >
 
-                                {/* ==============================
-                                    SHIPPING ADDRESS
-                                   ============================== */}
-
                                 <div className="checkout-field">
 
                                     <label
@@ -437,7 +384,7 @@ function CheckoutPage() {
                                         value={shippingAddress}
                                         placeholder="House / Flat No., Street, Area, City, State, PIN Code"
                                         onChange={
-                                            (event) =>
+                                            event =>
                                                 setShippingAddress(
                                                     event.target.value
                                                 )
@@ -451,10 +398,6 @@ function CheckoutPage() {
                                     </small>
 
                                 </div>
-
-                                {/* ==============================
-                                    PAYMENT
-                                   ============================== */}
 
                                 <div className="checkout-payment-section">
 
@@ -491,7 +434,7 @@ function CheckoutPage() {
                                             id="paymentMethod"
                                             value={paymentMethod}
                                             onChange={
-                                                (event) =>
+                                                event =>
                                                     setPaymentMethod(
                                                         event.target.value
                                                     )
@@ -516,19 +459,26 @@ function CheckoutPage() {
 
                                         </select>
 
+                                        {paymentMethod === 'COD' && (
+
+                                            <small>
+                                                You will pay the order
+                                                amount when the product
+                                                is delivered.
+                                            </small>
+
+                                        )}
+
                                     </div>
 
                                 </div>
-
-                                {/* ==============================
-                                    ACTIONS
-                                   ============================== */}
 
                                 <div className="checkout-form-actions">
 
                                     <button
                                         type="button"
                                         className="checkout-back-button"
+                                        disabled={processing}
                                         onClick={() =>
                                             navigate('/cart')
                                         }
@@ -543,7 +493,9 @@ function CheckoutPage() {
                                     >
                                         {processing
                                             ? 'Placing Order...'
-                                            : 'Place Order'}
+                                            : paymentMethod === 'COD'
+                                                ? 'Place COD Order'
+                                                : 'Place Order'}
                                     </button>
 
                                 </div>
@@ -553,10 +505,6 @@ function CheckoutPage() {
                         </div>
 
                     </section>
-
-                    {/* ==========================================
-                        RIGHT SIDE - ORDER SUMMARY
-                       ========================================== */}
 
                     <aside className="checkout-summary">
 
@@ -572,61 +520,55 @@ function CheckoutPage() {
 
                         </div>
 
-                        {/* ======================================
-                            PRODUCTS
-                           ====================================== */}
-
                         <div className="checkout-products">
 
-                            {items.map((item) => (
+                            {items.map(
+                                item => (
 
-                                <div
-                                    className="checkout-product"
-                                    key={item.id}
-                                >
+                                    <div
+                                        className="checkout-product"
+                                        key={item.id}
+                                    >
 
-                                    <div className="checkout-product-icon">
+                                        <div className="checkout-product-icon">
 
-                                        {item.productName
-                                            ?.charAt(0)
-                                            .toUpperCase()
-                                            || 'P'}
+                                            {item.productName
+                                                ?.charAt(0)
+                                                .toUpperCase()
+                                                || 'P'}
 
-                                    </div>
+                                        </div>
 
-                                    <div className="checkout-product-info">
+                                        <div className="checkout-product-info">
 
-                                        <h3>
-                                            {item.productName}
-                                        </h3>
+                                            <h3>
+                                                {item.productName}
+                                            </h3>
 
-                                        <p>
+                                            <p>
+                                                ₹{formatPrice(
+                                                    item.unitPrice
+                                                )}
+                                                {' × '}
+                                                {item.quantity}
+                                            </p>
+
+                                        </div>
+
+                                        <strong className="checkout-product-total">
+
                                             ₹{formatPrice(
-                                                item.unitPrice
+                                                item.totalPrice
                                             )}
-                                            {' × '}
-                                            {item.quantity}
-                                        </p>
+
+                                        </strong>
 
                                     </div>
 
-                                    <strong className="checkout-product-total">
-
-                                        ₹{formatPrice(
-                                            item.totalPrice
-                                        )}
-
-                                    </strong>
-
-                                </div>
-
-                            ))}
+                                )
+                            )}
 
                         </div>
-
-                        {/* ======================================
-                            SUMMARY
-                           ====================================== */}
 
                         <div className="checkout-summary-divider" />
 
@@ -670,22 +612,42 @@ function CheckoutPage() {
 
                         </div>
 
-                        {/* ======================================
-                            SECURITY NOTE
-                           ====================================== */}
+                        {paymentMethod === 'COD' && (
 
-                        <div className="checkout-secure-note">
+                            <div className="checkout-secure-note">
 
-                            <span>
-                                🔒
-                            </span>
+                                <span>
+                                    💵
+                                </span>
 
-                            <p>
-                                Your order information is
-                                securely processed.
-                            </p>
+                                <p>
+                                    ₹{formatPrice(
+                                        cart?.totalAmount
+                                    )}
+                                    {' '}
+                                    will be payable on delivery.
+                                </p>
 
-                        </div>
+                            </div>
+
+                        )}
+
+                        {paymentMethod !== 'COD' && (
+
+                            <div className="checkout-secure-note">
+
+                                <span>
+                                    🔒
+                                </span>
+
+                                <p>
+                                    Your order information is
+                                    securely processed.
+                                </p>
+
+                            </div>
+
+                        )}
 
                     </aside>
 

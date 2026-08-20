@@ -29,13 +29,26 @@ public class OrderService
         IKafkaProducer kafkaProducer,
         IConfiguration configuration)
     {
-        _orderRepository = orderRepository;
-        _cartRepository = cartRepository;
-        _productRepository = productRepository;
-        _userRepository = userRepository;
-        _unitOfWork = unitOfWork;
-        _kafkaProducer = kafkaProducer;
-        _configuration = configuration;
+        _orderRepository =
+            orderRepository;
+
+        _cartRepository =
+            cartRepository;
+
+        _productRepository =
+            productRepository;
+
+        _userRepository =
+            userRepository;
+
+        _unitOfWork =
+            unitOfWork;
+
+        _kafkaProducer =
+            kafkaProducer;
+
+        _configuration =
+            configuration;
     }
 
     // ============================================================
@@ -47,7 +60,7 @@ public class OrderService
         CreateOrderRequest request)
     {
         // --------------------------------------------------------
-        // Validation
+        // VALIDATION
         // --------------------------------------------------------
 
         if (userId == Guid.Empty)
@@ -69,22 +82,55 @@ public class OrderService
                 "Shipping address is required.");
         }
 
+        if (string.IsNullOrWhiteSpace(
+            request.PaymentMethod))
+        {
+            throw new ArgumentException(
+                "Payment method is required.");
+        }
+
         // --------------------------------------------------------
-        // Kafka topic
+        // PAYMENT METHOD VALIDATION
+        // --------------------------------------------------------
+
+        var supportedPaymentMethods =
+            new[]
+            {
+                "UPI",
+                "Card",
+                "NetBanking",
+                "COD"
+            };
+
+        var paymentMethod =
+            request.PaymentMethod.Trim();
+
+        if (!supportedPaymentMethods.Contains(
+            paymentMethod,
+            StringComparer.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "Invalid payment method.");
+        }
+
+        // --------------------------------------------------------
+        // KAFKA TOPIC
         // --------------------------------------------------------
 
         var topic =
-            _configuration["Kafka:OrderEventsTopic"]
+            _configuration[
+                "Kafka:OrderEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderEventsTopic is not configured.");
 
         // --------------------------------------------------------
-        // Load customer
+        // LOAD CUSTOMER
         // --------------------------------------------------------
 
         var user =
             await _userRepository
-                .GetByIdAsync(userId);
+                .GetByIdAsync(
+                    userId);
 
         if (user is null)
         {
@@ -101,7 +147,7 @@ public class OrderService
         Order? order = null;
 
         // --------------------------------------------------------
-        // Begin transaction
+        // BEGIN TRANSACTION
         // --------------------------------------------------------
 
         await _unitOfWork
@@ -115,7 +161,8 @@ public class OrderService
 
             var cart =
                 await _cartRepository
-                    .GetByUserIdAsync(userId);
+                    .GetByUserIdAsync(
+                        userId);
 
             if (cart is null ||
                 cart.Items.Count == 0)
@@ -137,7 +184,8 @@ public class OrderService
             // CART ITEMS -> ORDER ITEMS
             // ====================================================
 
-            foreach (var cartItem in cart.Items)
+            foreach (var cartItem in
+                     cart.Items)
             {
                 var product =
                     await _productRepository
@@ -145,7 +193,7 @@ public class OrderService
                             cartItem.ProductId);
 
                 // ------------------------------------------------
-                // Product must exist and be active
+                // PRODUCT AVAILABILITY
                 // ------------------------------------------------
 
                 if (product is null ||
@@ -157,7 +205,7 @@ public class OrderService
                 }
 
                 // ------------------------------------------------
-                // Stock validation
+                // STOCK VALIDATION
                 // ------------------------------------------------
 
                 if (cartItem.Quantity >
@@ -173,7 +221,7 @@ public class OrderService
                 }
 
                 // ------------------------------------------------
-                // Create order item
+                // ORDER ITEM
                 // ------------------------------------------------
 
                 var orderItem =
@@ -187,22 +235,41 @@ public class OrderService
                     orderItem);
 
                 // ------------------------------------------------
-                // Reduce inventory
+                // REDUCE INVENTORY
                 // ------------------------------------------------
 
                 product.ReduceStock(
                     cartItem.Quantity);
 
                 await _productRepository
-                    .UpdateAsync(product);
+                    .UpdateAsync(
+                        product);
             }
+
+            // ====================================================
+            // AUTO CONFIRM ORDER
+            // ====================================================
+            //
+            // Checkout itself confirms the order.
+            //
+            // New orders will therefore start as:
+            //
+            // Confirmed
+            //
+            // instead of:
+            //
+            // Pending
+            // ====================================================
+
+            order.Confirm();
 
             // ====================================================
             // SAVE ORDER
             // ====================================================
 
             await _orderRepository
-                .AddAsync(order);
+                .AddAsync(
+                    order);
 
             // ====================================================
             // CLEAR CART
@@ -211,7 +278,8 @@ public class OrderService
             cart.Clear();
 
             await _cartRepository
-                .UpdateAsync(cart);
+                .UpdateAsync(
+                    cart);
 
             // ====================================================
             // COMMIT
@@ -260,12 +328,15 @@ public class OrderService
                 TotalAmount =
                     order.TotalAmount,
 
+                PaymentMethod =
+                    paymentMethod,
+
                 CreatedAt =
                     order.CreatedAt
             };
 
         // --------------------------------------------------------
-        // Publish only after DB commit
+        // PUBLISH AFTER DATABASE COMMIT
         // --------------------------------------------------------
 
         await _kafkaProducer
@@ -273,7 +344,8 @@ public class OrderService
                 topic,
                 orderCreatedEvent);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -292,10 +364,12 @@ public class OrderService
 
         var orders =
             await _orderRepository
-                .GetByUserIdAsync(userId);
+                .GetByUserIdAsync(
+                    userId);
 
         return orders
-            .Select(MapToDto)
+            .Select(
+                MapToDto)
             .ToList();
     }
 
@@ -322,7 +396,8 @@ public class OrderService
 
         var order =
             await _orderRepository
-                .GetByIdAsync(orderId);
+                .GetByIdAsync(
+                    orderId);
 
         if (order is null ||
             order.UserId != userId)
@@ -330,20 +405,12 @@ public class OrderService
             return null;
         }
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
     // ADMIN - GET ALL ORDERS
-    // ============================================================
-
-    // ============================================================
-    // ADMIN - GET ALL ORDERS
-    // ============================================================
-    //
-    // Returns all orders together with customer details.
-    //
-    // This is intended for the Admin Orders screen.
     // ============================================================
 
     public async Task<IReadOnlyList<OrderDto>>
@@ -356,7 +423,8 @@ public class OrderService
         var result =
             new List<OrderDto>();
 
-        foreach (var order in orders)
+        foreach (var order in
+                 orders)
         {
             var user =
                 await _userRepository
@@ -364,7 +432,8 @@ public class OrderService
                         order.UserId);
 
             var dto =
-                MapToDto(order);
+                MapToDto(
+                    order);
 
             if (user is not null)
             {
@@ -390,7 +459,8 @@ public class OrderService
                     null;
             }
 
-            result.Add(dto);
+            result.Add(
+                dto);
         }
 
         return result;
@@ -398,6 +468,11 @@ public class OrderService
 
     // ============================================================
     // ADMIN - CONFIRM ORDER
+    // ============================================================
+    //
+    // Kept for older Pending orders.
+    //
+    // New checkout orders are automatically Confirmed.
     // ============================================================
 
     public async Task<OrderDto>
@@ -411,25 +486,18 @@ public class OrderService
         var previousStatus =
             order.Status.ToString();
 
-        // --------------------------------------------------------
-        // Domain transition:
-        // Pending -> Confirmed
-        // --------------------------------------------------------
-
         order.Confirm();
 
         await _orderRepository
-            .UpdateAsync(order);
-
-        // --------------------------------------------------------
-        // Publish status notification
-        // --------------------------------------------------------
+            .UpdateAsync(
+                order);
 
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -447,25 +515,18 @@ public class OrderService
         var previousStatus =
             order.Status.ToString();
 
-        // --------------------------------------------------------
-        // Domain transition:
-        // Confirmed -> Processing
-        // --------------------------------------------------------
-
         order.StartProcessing();
 
         await _orderRepository
-            .UpdateAsync(order);
-
-        // --------------------------------------------------------
-        // Publish status notification
-        // --------------------------------------------------------
+            .UpdateAsync(
+                order);
 
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -483,25 +544,18 @@ public class OrderService
         var previousStatus =
             order.Status.ToString();
 
-        // --------------------------------------------------------
-        // Domain transition:
-        // Processing -> Shipped
-        // --------------------------------------------------------
-
         order.Ship();
 
         await _orderRepository
-            .UpdateAsync(order);
-
-        // --------------------------------------------------------
-        // Publish status notification
-        // --------------------------------------------------------
+            .UpdateAsync(
+                order);
 
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -519,25 +573,18 @@ public class OrderService
         var previousStatus =
             order.Status.ToString();
 
-        // --------------------------------------------------------
-        // Domain transition:
-        // Shipped -> Delivered
-        // --------------------------------------------------------
-
         order.Deliver();
 
         await _orderRepository
-            .UpdateAsync(order);
-
-        // --------------------------------------------------------
-        // Publish status notification
-        // --------------------------------------------------------
+            .UpdateAsync(
+                order);
 
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -554,18 +601,11 @@ public class OrderService
                 "OrderId is required.");
         }
 
-        Order? order = null;
+        Order? order =
+            null;
 
-        string? previousStatus = null;
-
-        // --------------------------------------------------------
-        // Cancellation changes both:
-        //
-        // - Order status
-        // - Inventory
-        //
-        // Keep them inside one transaction.
-        // --------------------------------------------------------
+        string? previousStatus =
+            null;
 
         await _unitOfWork
             .BeginTransactionAsync();
@@ -574,7 +614,8 @@ public class OrderService
         {
             order =
                 await _orderRepository
-                    .GetByIdAsync(orderId);
+                    .GetByIdAsync(
+                        orderId);
 
             if (order is null)
             {
@@ -582,21 +623,17 @@ public class OrderService
                     "Order not found.");
             }
 
-            // ----------------------------------------------------
-            // Remember old status before cancellation
-            // ----------------------------------------------------
-
             previousStatus =
                 order.Status.ToString();
 
             // ----------------------------------------------------
-            // Domain cancellation rules
+            // CANCEL ORDER
             // ----------------------------------------------------
 
             order.Cancel();
 
             // ----------------------------------------------------
-            // Restore product stock
+            // RESTORE STOCK
             // ----------------------------------------------------
 
             foreach (var orderItem in
@@ -619,19 +656,13 @@ public class OrderService
                     orderItem.Quantity);
 
                 await _productRepository
-                    .UpdateAsync(product);
+                    .UpdateAsync(
+                        product);
             }
 
-            // ----------------------------------------------------
-            // Save cancelled order
-            // ----------------------------------------------------
-
             await _orderRepository
-                .UpdateAsync(order);
-
-            // ----------------------------------------------------
-            // Commit cancellation + inventory restoration
-            // ----------------------------------------------------
+                .UpdateAsync(
+                    order);
 
             await _unitOfWork
                 .CommitTransactionAsync();
@@ -653,14 +684,15 @@ public class OrderService
         }
 
         // --------------------------------------------------------
-        // Publish only AFTER cancellation transaction commits
+        // PUBLISH AFTER COMMIT
         // --------------------------------------------------------
 
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
 
-        return MapToDto(order);
+        return MapToDto(
+            order);
     }
 
     // ============================================================
@@ -672,19 +704,11 @@ public class OrderService
             Order order,
             string previousStatus)
     {
-        // --------------------------------------------------------
-        // Kafka topic
-        // --------------------------------------------------------
-
         var topic =
             _configuration[
                 "Kafka:OrderStatusEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderStatusEventsTopic is not configured.");
-
-        // --------------------------------------------------------
-        // Load customer
-        // --------------------------------------------------------
 
         var user =
             await _userRepository
@@ -703,10 +727,6 @@ public class OrderService
             throw new InvalidOperationException(
                 "Customer email is missing.");
         }
-
-        // --------------------------------------------------------
-        // Build event
-        // --------------------------------------------------------
 
         var orderStatusChangedEvent =
             new OrderStatusChangedEvent
@@ -743,10 +763,6 @@ public class OrderService
                     order.UpdatedAt
                     ?? DateTime.UtcNow
             };
-
-        // --------------------------------------------------------
-        // Publish event
-        // --------------------------------------------------------
 
         await _kafkaProducer
             .PublishAsync(

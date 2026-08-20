@@ -14,8 +14,11 @@ public class EmailService : IEmailService
         IConfiguration configuration,
         ILogger<EmailService> logger)
     {
-        _configuration = configuration;
-        _logger = logger;
+        _configuration =
+            configuration;
+
+        _logger =
+            logger;
     }
 
     // ============================================================
@@ -26,56 +29,184 @@ public class EmailService : IEmailService
         OrderCreatedEvent orderEvent,
         CancellationToken cancellationToken = default)
     {
+        var isCod =
+            orderEvent.PaymentMethod.Equals(
+                "COD",
+                StringComparison.OrdinalIgnoreCase);
+
         var subject =
-            $"Order Confirmation - {orderEvent.OrderNumber}";
+            $"Order Confirmed - {orderEvent.OrderNumber}";
+
+        // ========================================================
+        // PAYMENT INFORMATION BLOCK
+        // ========================================================
+
+        string paymentBlock;
+
+        string additionalMessage;
+
+        if (isCod)
+        {
+            paymentBlock =
+                $"""
+                <div style="
+                    background:#fff7ed;
+                    border:1px solid #fed7aa;
+                    padding:18px;
+                    border-radius:8px;
+                    margin:20px 0;
+                ">
+
+                    <p style="margin:0 0 10px;">
+                        <strong>
+                            Payment Method:
+                        </strong>
+
+                        Cash on Delivery
+                    </p>
+
+                    <p style="margin:0;">
+                        Please pay
+                        <strong>
+                            ₹{orderEvent.TotalAmount:N2}
+                        </strong>
+                        when your order is delivered.
+                    </p>
+
+                </div>
+                """;
+
+            additionalMessage =
+                """
+                <p>
+                    Your order is confirmed.
+                    No online payment is required.
+                    Please keep the payable amount ready
+                    when the order is delivered.
+                </p>
+                """;
+        }
+        else
+        {
+            paymentBlock =
+                $"""
+                <div style="
+                    background:#eff6ff;
+                    border:1px solid #bfdbfe;
+                    padding:18px;
+                    border-radius:8px;
+                    margin:20px 0;
+                ">
+
+                    <p style="margin:0;">
+                        <strong>
+                            Payment Method:
+                        </strong>
+
+                        {orderEvent.PaymentMethod}
+                    </p>
+
+                </div>
+                """;
+
+            additionalMessage =
+                """
+                <p>
+                    Your order is confirmed.
+                    Please complete your payment using
+                    the selected payment method.
+                </p>
+                """;
+        }
+
+        // ========================================================
+        // EMAIL BODY
+        // ========================================================
 
         var body =
             $"""
-            <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;color:#1e293b;">
+            <div style="
+                font-family:Arial,sans-serif;
+                max-width:650px;
+                margin:auto;
+                color:#1e293b;
+            ">
 
-                <div style="background:#2563eb;padding:24px;color:#fff;border-radius:8px 8px 0 0;">
+                <div style="
+                    background:#2563eb;
+                    padding:24px;
+                    color:#ffffff;
+                    border-radius:8px 8px 0 0;
+                ">
+
                     <h2 style="margin:0;">
                         Order Confirmed
                     </h2>
+
                 </div>
 
-                <div style="border:1px solid #e2e8f0;padding:25px;border-radius:0 0 8px 8px;">
+                <div style="
+                    border:1px solid #e2e8f0;
+                    padding:25px;
+                    border-radius:0 0 8px 8px;
+                ">
 
                     <p>
-                        Hello <strong>{orderEvent.CustomerName}</strong>,
+                        Hello
+                        <strong>
+                            {orderEvent.CustomerName}
+                        </strong>,
                     </p>
 
                     <p>
                         Thank you for your order.
-                        Your order has been received successfully.
+                        Your order has been confirmed successfully.
                     </p>
 
-                    <div style="background:#f8fafc;padding:18px;border-radius:8px;margin:20px 0;">
+                    <div style="
+                        background:#f8fafc;
+                        padding:18px;
+                        border-radius:8px;
+                        margin:20px 0;
+                    ">
 
                         <p>
-                            <strong>Order Number:</strong>
+                            <strong>
+                                Order Number:
+                            </strong>
+
                             {orderEvent.OrderNumber}
                         </p>
 
                         <p>
-                            <strong>Total Amount:</strong>
+                            <strong>
+                                Total Amount:
+                            </strong>
+
                             ₹{orderEvent.TotalAmount:N2}
                         </p>
 
                         <p>
-                            <strong>Order Date:</strong>
+                            <strong>
+                                Order Date:
+                            </strong>
+
                             {orderEvent.CreatedAt:dd MMM yyyy HH:mm}
                         </p>
 
                     </div>
 
-                    <p>
-                        We will notify you when your order moves to the next stage.
-                    </p>
+                    {paymentBlock}
+
+                    {additionalMessage}
 
                     <p>
-                        Regards,<br />
-                        <strong>Enterprise E-Commerce</strong>
+                        Regards,
+                        <br />
+
+                        <strong>
+                            Enterprise E-Commerce
+                        </strong>
                     </p>
 
                 </div>
@@ -103,65 +234,125 @@ public class EmailService : IEmailService
         PaymentSucceededEvent paymentEvent,
         CancellationToken cancellationToken = default)
     {
+        // ========================================================
+        // COD DOES NOT REQUIRE PAYMENT SUCCESS EMAIL
+        // ========================================================
+
+        if (paymentEvent.PaymentMethod.Equals(
+            "COD",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Payment success email skipped for COD order {OrderNumber}.",
+                paymentEvent.OrderNumber);
+
+            return;
+        }
+
         var subject =
             $"Payment Successful - {paymentEvent.OrderNumber}";
 
         var body =
             $"""
-            <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;color:#1e293b;">
+            <div style="
+                font-family:Arial,sans-serif;
+                max-width:650px;
+                margin:auto;
+                color:#1e293b;
+            ">
 
-                <div style="background:#16a34a;padding:24px;color:#fff;border-radius:8px 8px 0 0;">
+                <div style="
+                    background:#16a34a;
+                    padding:24px;
+                    color:#ffffff;
+                    border-radius:8px 8px 0 0;
+                ">
+
                     <h2 style="margin:0;">
                         Payment Successful
                     </h2>
+
                 </div>
 
-                <div style="border:1px solid #e2e8f0;padding:25px;border-radius:0 0 8px 8px;">
+                <div style="
+                    border:1px solid #e2e8f0;
+                    padding:25px;
+                    border-radius:0 0 8px 8px;
+                ">
 
                     <p>
-                        Hello <strong>{paymentEvent.CustomerName}</strong>,
+                        Hello
+                        <strong>
+                            {paymentEvent.CustomerName}
+                        </strong>,
                     </p>
 
                     <p>
                         Your payment has been received successfully.
                     </p>
 
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:18px;border-radius:8px;margin:20px 0;">
+                    <div style="
+                        background:#f0fdf4;
+                        border:1px solid #bbf7d0;
+                        padding:18px;
+                        border-radius:8px;
+                        margin:20px 0;
+                    ">
 
                         <p>
-                            <strong>Order Number:</strong>
+                            <strong>
+                                Order Number:
+                            </strong>
+
                             {paymentEvent.OrderNumber}
                         </p>
 
                         <p>
-                            <strong>Amount Paid:</strong>
+                            <strong>
+                                Amount Paid:
+                            </strong>
+
                             ₹{paymentEvent.Amount:N2}
                         </p>
 
                         <p>
-                            <strong>Payment Method:</strong>
+                            <strong>
+                                Payment Method:
+                            </strong>
+
                             {paymentEvent.PaymentMethod}
                         </p>
 
                         <p>
-                            <strong>Transaction ID:</strong>
+                            <strong>
+                                Transaction ID:
+                            </strong>
+
                             {paymentEvent.TransactionId}
                         </p>
 
                         <p>
-                            <strong>Payment Date:</strong>
+                            <strong>
+                                Payment Date:
+                            </strong>
+
                             {paymentEvent.PaidAt:dd MMM yyyy HH:mm}
                         </p>
 
                     </div>
 
                     <p>
-                        Your order will continue through the fulfillment process.
+                        Your payment is complete and
+                        your order remains confirmed.
                     </p>
 
                     <p>
-                        Regards,<br />
-                        <strong>Enterprise E-Commerce</strong>
+                        Regards,
+                        <br />
+
+                        <strong>
+                            Enterprise E-Commerce
+                        </strong>
                     </p>
 
                 </div>
@@ -182,33 +373,78 @@ public class EmailService : IEmailService
     }
 
     // ============================================================
-    // ORDER STATUS CHANGED
+    // ORDER STATUS EMAIL
     // ============================================================
 
     public async Task SendOrderStatusChangedAsync(
         OrderStatusChangedEvent orderEvent,
         CancellationToken cancellationToken = default)
     {
-        var title =
-            GetStatusTitle(
+        var status =
+            orderEvent.NewStatus
+                .Trim()
+                .ToLowerInvariant();
+
+        // ========================================================
+        // ONLY TWO STATUS EMAILS
+        // ========================================================
+
+        if (status != "delivered" &&
+            status != "cancelled")
+        {
+            _logger.LogInformation(
+                "Order status email skipped for status {Status}.",
                 orderEvent.NewStatus);
 
-        var message =
-            GetStatusMessage(
-                orderEvent.NewStatus);
+            return;
+        }
 
-        var headerColor =
-            GetStatusColor(
-                orderEvent.NewStatus);
+        string title;
+        string message;
+        string headerColor;
+
+        if (status == "delivered")
+        {
+            title =
+                "Order Delivered";
+
+            message =
+                "Your order has been delivered successfully. " +
+                "Thank you for shopping with us.";
+
+            headerColor =
+                "#16a34a";
+        }
+        else
+        {
+            title =
+                "Order Cancelled";
+
+            message =
+                "Your order has been cancelled.";
+
+            headerColor =
+                "#dc2626";
+        }
 
         var subject =
             $"{title} - {orderEvent.OrderNumber}";
 
         var body =
             $"""
-            <div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;color:#1e293b;">
+            <div style="
+                font-family:Arial,sans-serif;
+                max-width:650px;
+                margin:auto;
+                color:#1e293b;
+            ">
 
-                <div style="background:{headerColor};padding:24px;color:#fff;border-radius:8px 8px 0 0;">
+                <div style="
+                    background:{headerColor};
+                    padding:24px;
+                    color:#ffffff;
+                    border-radius:8px 8px 0 0;
+                ">
 
                     <h2 style="margin:0;">
                         {title}
@@ -216,53 +452,79 @@ public class EmailService : IEmailService
 
                 </div>
 
-                <div style="border:1px solid #e2e8f0;padding:25px;border-radius:0 0 8px 8px;">
+                <div style="
+                    border:1px solid #e2e8f0;
+                    padding:25px;
+                    border-radius:0 0 8px 8px;
+                ">
 
                     <p>
-                        Hello <strong>{orderEvent.CustomerName}</strong>,
+                        Hello
+                        <strong>
+                            {orderEvent.CustomerName}
+                        </strong>,
                     </p>
 
                     <p>
                         {message}
                     </p>
 
-                    <div style="background:#f8fafc;padding:18px;border-radius:8px;margin:20px 0;">
+                    <div style="
+                        background:#f8fafc;
+                        padding:18px;
+                        border-radius:8px;
+                        margin:20px 0;
+                    ">
 
                         <p>
-                            <strong>Order Number:</strong>
+                            <strong>
+                                Order Number:
+                            </strong>
+
                             {orderEvent.OrderNumber}
                         </p>
 
                         <p>
-                            <strong>Previous Status:</strong>
-                            {orderEvent.PreviousStatus}
-                        </p>
+                            <strong>
+                                Status:
+                            </strong>
 
-                        <p>
-                            <strong>Current Status:</strong>
                             {orderEvent.NewStatus}
                         </p>
 
                         <p>
-                            <strong>Total Amount:</strong>
+                            <strong>
+                                Total Amount:
+                            </strong>
+
                             ₹{orderEvent.TotalAmount:N2}
                         </p>
 
                         <p>
-                            <strong>Shipping Address:</strong>
+                            <strong>
+                                Shipping Address:
+                            </strong>
+
                             {orderEvent.ShippingAddress}
                         </p>
 
                         <p>
-                            <strong>Updated:</strong>
+                            <strong>
+                                Updated:
+                            </strong>
+
                             {orderEvent.ChangedAt:dd MMM yyyy HH:mm}
                         </p>
 
                     </div>
 
                     <p>
-                        Regards,<br />
-                        <strong>Enterprise E-Commerce</strong>
+                        Regards,
+                        <br />
+
+                        <strong>
+                            Enterprise E-Commerce
+                        </strong>
                     </p>
 
                 </div>
@@ -278,88 +540,9 @@ public class EmailService : IEmailService
             cancellationToken);
 
         _logger.LogInformation(
-            "Order status email sent for order {OrderNumber}. New status: {NewStatus}",
-            orderEvent.OrderNumber,
-            orderEvent.NewStatus);
-    }
-
-    // ============================================================
-    // STATUS CONTENT
-    // ============================================================
-
-    private static string GetStatusTitle(
-        string status)
-    {
-        return status.ToLowerInvariant() switch
-        {
-            "confirmed" =>
-                "Order Confirmed",
-
-            "processing" =>
-                "Order Processing",
-
-            "shipped" =>
-                "Your Order Has Been Shipped",
-
-            "delivered" =>
-                "Order Delivered",
-
-            "cancelled" =>
-                "Order Cancelled",
-
-            _ =>
-                "Order Status Updated"
-        };
-    }
-
-    private static string GetStatusMessage(
-        string status)
-    {
-        return status.ToLowerInvariant() switch
-        {
-            "confirmed" =>
-                "Your order has been confirmed and will soon move into processing.",
-
-            "processing" =>
-                "Your order is currently being prepared for shipment.",
-
-            "shipped" =>
-                "Your order has been shipped and is now on the way to you.",
-
-            "delivered" =>
-                "Your order has been marked as delivered. Thank you for shopping with us.",
-
-            "cancelled" =>
-                "Your order has been cancelled. Any applicable payment handling will follow according to the order policy.",
-
-            _ =>
-                "The status of your order has been updated."
-        };
-    }
-
-    private static string GetStatusColor(
-        string status)
-    {
-        return status.ToLowerInvariant() switch
-        {
-            "confirmed" =>
-                "#2563eb",
-
-            "processing" =>
-                "#4f46e5",
-
-            "shipped" =>
-                "#7c3aed",
-
-            "delivered" =>
-                "#16a34a",
-
-            "cancelled" =>
-                "#dc2626",
-
-            _ =>
-                "#475569"
-        };
+            "Order {Status} email sent for order {OrderNumber}.",
+            orderEvent.NewStatus,
+            orderEvent.OrderNumber);
     }
 
     // ============================================================
@@ -381,22 +564,26 @@ public class EmailService : IEmailService
         }
 
         var host =
-            _configuration["Email:SmtpHost"]
+            _configuration[
+                "Email:SmtpHost"]
             ?? throw new InvalidOperationException(
                 "Email SMTP host is not configured.");
 
         var username =
-            _configuration["Email:Username"]
+            _configuration[
+                "Email:Username"]
             ?? throw new InvalidOperationException(
                 "Email username is not configured.");
 
         var password =
-            _configuration["Email:Password"]
+            _configuration[
+                "Email:Password"]
             ?? throw new InvalidOperationException(
                 "Email password is not configured.");
 
         var fromEmail =
-            _configuration["Email:FromEmail"]
+            _configuration[
+                "Email:FromEmail"]
             ?? username;
 
         var port =

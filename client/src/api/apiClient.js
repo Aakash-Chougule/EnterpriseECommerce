@@ -4,17 +4,13 @@ import axios from 'axios'
 // AXIOS API CLIENT
 // ============================================================
 //
-// This creates one reusable Axios instance for communicating
-// with our ASP.NET Core backend.
+// LOCAL DEVELOPMENT MODE:
 //
-// Instead of writing the complete API URL everywhere:
+// React:
+// http://localhost:5173
 //
-// axios.get('http://localhost:5042/api/Products')
-//
-// we can simply write:
-//
-// apiClient.get('/Products')
-//
+// ASP.NET API:
+// http://localhost:5042
 // ============================================================
 
 const apiClient = axios.create({
@@ -29,24 +25,19 @@ const apiClient = axios.create({
 // REQUEST INTERCEPTOR
 // ============================================================
 //
-// An interceptor runs BEFORE every HTTP request.
-//
-// We use it to automatically retrieve the JWT from localStorage
-// and attach it to the Authorization header.
-//
-// Authorization: Bearer eyJhbGciOi...
-//
-// This means individual services don't need to manually add
-// the JWT every time.
+// Automatically add JWT token to authenticated requests.
 // ============================================================
 
 apiClient.interceptors.request.use(
     (config) => {
 
         const accessToken =
-            localStorage.getItem('accessToken')
+            localStorage.getItem(
+                'accessToken'
+            )
 
         if (accessToken) {
+
             config.headers.Authorization =
                 `Bearer ${accessToken}`
         }
@@ -55,8 +46,44 @@ apiClient.interceptors.request.use(
     },
 
     (error) => {
-        return Promise.reject(error)
+
+        return Promise.reject(
+            error
+        )
     }
 )
+
+// ============================================================
+// RESPONSE INTERCEPTOR
+// ============================================================
+//
+// Remove invalid/expired JWT when backend returns 401.
+// ============================================================
+
+apiClient.interceptors.response.use(
+    (response) => {
+
+        return response
+    },
+
+    (error) => {
+
+        if (
+            error.response?.status === 401
+        ) {
+            localStorage.removeItem(
+                'accessToken'
+            )
+        }
+
+        return Promise.reject(
+            error
+        )
+    }
+)
+
+// ============================================================
+// EXPORT
+// ============================================================
 
 export default apiClient

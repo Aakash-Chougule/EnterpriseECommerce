@@ -1,17 +1,21 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace EnterpriseECommerce.IntegrationTests;
 
 public class AuthIntegrationTests
     : IClassFixture<CustomWebApplicationFactory>
 {
+    private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
     public AuthIntegrationTests(
         CustomWebApplicationFactory factory)
     {
+        _factory = factory;
+
         _client =
             factory.CreateClient();
     }
@@ -47,7 +51,7 @@ public class AuthIntegrationTests
     }
 
     // ============================================================
-    // REGISTER DUPLICATE USER
+    // DUPLICATE REGISTRATION
     // ============================================================
 
     [Fact]
@@ -66,6 +70,10 @@ public class AuthIntegrationTests
                 phoneNumber = "9876543210"
             };
 
+        // --------------------------------------------------------
+        // First registration
+        // --------------------------------------------------------
+
         var firstResponse =
             await _client.PostAsJsonAsync(
                 "/api/Auth/register",
@@ -74,6 +82,10 @@ public class AuthIntegrationTests
         Assert.Equal(
             HttpStatusCode.OK,
             firstResponse.StatusCode);
+
+        // --------------------------------------------------------
+        // Duplicate registration
+        // --------------------------------------------------------
 
         var secondResponse =
             await _client.PostAsJsonAsync(
@@ -86,7 +98,7 @@ public class AuthIntegrationTests
     }
 
     // ============================================================
-    // LOGIN
+    // VALID LOGIN
     // ============================================================
 
     [Fact]
@@ -95,27 +107,24 @@ public class AuthIntegrationTests
         var uniqueEmail =
             $"login-{Guid.NewGuid():N}@example.com";
 
-        var password =
+        const string password =
             "Password@123";
 
         // --------------------------------------------------------
-        // Register first
+        // Register
         // --------------------------------------------------------
-
-        var registerRequest =
-            new
-            {
-                firstName = "Login",
-                lastName = "User",
-                email = uniqueEmail,
-                password,
-                phoneNumber = "9876543210"
-            };
 
         var registerResponse =
             await _client.PostAsJsonAsync(
                 "/api/Auth/register",
-                registerRequest);
+                new
+                {
+                    firstName = "Login",
+                    lastName = "User",
+                    email = uniqueEmail,
+                    password,
+                    phoneNumber = "9876543210"
+                });
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -125,32 +134,30 @@ public class AuthIntegrationTests
         // Login
         // --------------------------------------------------------
 
-        var loginRequest =
-            new
-            {
-                email = uniqueEmail,
-                password
-            };
-
         var loginResponse =
             await _client.PostAsJsonAsync(
                 "/api/Auth/login",
-                loginRequest);
+                new
+                {
+                    email = uniqueEmail,
+                    password
+                });
 
         Assert.Equal(
             HttpStatusCode.OK,
             loginResponse.StatusCode);
 
-        var loginResult =
-            await loginResponse.Content
-                .ReadFromJsonAsync<LoginResponse>();
+        // --------------------------------------------------------
+        // Extract JWT
+        // --------------------------------------------------------
 
-        Assert.NotNull(
-            loginResult);
+        var token =
+            await ExtractTokenAsync(
+                loginResponse);
 
         Assert.False(
             string.IsNullOrWhiteSpace(
-                loginResult!.Token));
+                token));
     }
 
     // ============================================================
@@ -167,40 +174,34 @@ public class AuthIntegrationTests
         // Register
         // --------------------------------------------------------
 
-        var registerRequest =
-            new
-            {
-                firstName = "Wrong",
-                lastName = "Password",
-                email = uniqueEmail,
-                password = "CorrectPassword@123",
-                phoneNumber = "9876543210"
-            };
-
         var registerResponse =
             await _client.PostAsJsonAsync(
                 "/api/Auth/register",
-                registerRequest);
+                new
+                {
+                    firstName = "Wrong",
+                    lastName = "Password",
+                    email = uniqueEmail,
+                    password = "CorrectPassword@123",
+                    phoneNumber = "9876543210"
+                });
 
         Assert.Equal(
             HttpStatusCode.OK,
             registerResponse.StatusCode);
 
         // --------------------------------------------------------
-        // Attempt login with wrong password
+        // Wrong password
         // --------------------------------------------------------
-
-        var loginRequest =
-            new
-            {
-                email = uniqueEmail,
-                password = "WrongPassword@123"
-            };
 
         var loginResponse =
             await _client.PostAsJsonAsync(
                 "/api/Auth/login",
-                loginRequest);
+                new
+                {
+                    email = uniqueEmail,
+                    password = "WrongPassword@123"
+                });
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
@@ -208,7 +209,7 @@ public class AuthIntegrationTests
     }
 
     // ============================================================
-    // PROTECTED ENDPOINT WITH JWT
+    // PROTECTED ENDPOINT WITH VALID JWT
     // ============================================================
 
     [Fact]
@@ -217,11 +218,11 @@ public class AuthIntegrationTests
         var uniqueEmail =
             $"jwt-{Guid.NewGuid():N}@example.com";
 
-        var password =
+        const string password =
             "Password@123";
 
         // --------------------------------------------------------
-        // Register user
+        // Register
         // --------------------------------------------------------
 
         var registerResponse =
@@ -241,7 +242,7 @@ public class AuthIntegrationTests
             registerResponse.StatusCode);
 
         // --------------------------------------------------------
-        // Login user
+        // Login
         // --------------------------------------------------------
 
         var loginResponse =
@@ -257,33 +258,40 @@ public class AuthIntegrationTests
             HttpStatusCode.OK,
             loginResponse.StatusCode);
 
-        var loginResult =
-            await loginResponse.Content
-                .ReadFromJsonAsync<LoginResponse>();
+        // --------------------------------------------------------
+        // Extract JWT
+        // --------------------------------------------------------
 
-        Assert.NotNull(
-            loginResult);
+        var token =
+            await ExtractTokenAsync(
+                loginResponse);
 
         Assert.False(
             string.IsNullOrWhiteSpace(
-                loginResult!.Token));
+                token));
 
         // --------------------------------------------------------
-        // Add JWT
+        // Use a dedicated authenticated client
         // --------------------------------------------------------
 
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(
-                "Bearer",
-                loginResult.Token);
+        var authenticatedClient =
+            _factory.CreateClient();
+
+        authenticatedClient
+            .DefaultRequestHeaders
+            .Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    token);
 
         // --------------------------------------------------------
-        // Call protected endpoint
+        // Protected endpoint
         // --------------------------------------------------------
 
         var ordersResponse =
-            await _client.GetAsync(
-                "/api/Orders");
+            await authenticatedClient
+                .GetAsync(
+                    "/api/Orders");
 
         Assert.Equal(
             HttpStatusCode.OK,
@@ -297,16 +305,24 @@ public class AuthIntegrationTests
     [Fact]
     public async Task OrdersEndpoint_WithoutJwt_ReturnsUnauthorized()
     {
+        // IMPORTANT:
+        //
+        // Do NOT create:
+        //
+        // new HttpClient()
+        //
+        // because that would connect to localhost:80.
+        //
+        // factory.CreateClient() talks to the ASP.NET integration
+        // test server.
+
         var clientWithoutToken =
-            new HttpClient
-            {
-                BaseAddress =
-                    _client.BaseAddress
-            };
+            _factory.CreateClient();
 
         var response =
-            await clientWithoutToken.GetAsync(
-                "/api/Orders");
+            await clientWithoutToken
+                .GetAsync(
+                    "/api/Orders");
 
         Assert.Equal(
             HttpStatusCode.Unauthorized,
@@ -314,12 +330,68 @@ public class AuthIntegrationTests
     }
 
     // ============================================================
-    // TEST RESPONSE MODEL
+    // JWT EXTRACTION
     // ============================================================
 
-    private class LoginResponse
+    private static async Task<string>
+        ExtractTokenAsync(
+            HttpResponseMessage response)
     {
-        public string Token { get; set; } =
-            string.Empty;
+        var json =
+            await response.Content
+                .ReadAsStringAsync();
+
+        Assert.False(
+            string.IsNullOrWhiteSpace(
+                json));
+
+        using var document =
+            JsonDocument.Parse(
+                json);
+
+        var root =
+            document.RootElement;
+
+        // --------------------------------------------------------
+        // Backend may return:
+        //
+        // {
+        //     "token": "..."
+        // }
+        //
+        // or:
+        //
+        // {
+        //     "accessToken": "..."
+        // }
+        // --------------------------------------------------------
+
+        if (root.TryGetProperty(
+            "token",
+            out var tokenElement))
+        {
+            return (
+                tokenElement.GetString()
+                ?? string.Empty
+            );
+        }
+
+        if (root.TryGetProperty(
+            "accessToken",
+            out var accessTokenElement))
+        {
+            return (
+                accessTokenElement.GetString()
+                ?? string.Empty
+            );
+        }
+
+        // --------------------------------------------------------
+        // Fail with useful information.
+        // --------------------------------------------------------
+
+        throw new InvalidOperationException(
+            $"JWT token property was not found. " +
+            $"Login response was: {json}");
     }
 }

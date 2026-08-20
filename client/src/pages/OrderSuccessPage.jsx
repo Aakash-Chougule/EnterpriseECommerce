@@ -43,59 +43,66 @@ function OrderSuccessPage() {
         useState('')
 
     // ========================================================
-    // LOAD ORDER + PAYMENT DETAILS
+    // LOAD DETAILS
     // ========================================================
 
-    const loadDetails = async () => {
-
-        try {
-
-            setLoading(true)
-            setError('')
-
-            const orderData =
-                await getOrderById(
-                    orderId
-                )
-
-            setOrder(orderData)
+    const loadDetails =
+        async () => {
 
             try {
 
-                const paymentData =
-                    await getPaymentByOrderId(
+                setLoading(true)
+                setError('')
+
+                const orderData =
+                    await getOrderById(
                         orderId
                     )
 
-                setPayment(paymentData)
-            }
-            catch (paymentError) {
-
-                console.error(
-                    'Unable to load payment:',
-                    paymentError
+                setOrder(
+                    orderData
                 )
 
-                setPayment(null)
+                try {
+
+                    const paymentData =
+                        await getPaymentByOrderId(
+                            orderId
+                        )
+
+                    setPayment(
+                        paymentData
+                    )
+                }
+                catch (paymentError) {
+
+                    console.error(
+                        'Unable to load payment:',
+                        paymentError
+                    )
+
+                    setPayment(
+                        null
+                    )
+                }
+            }
+            catch (err) {
+
+                console.error(
+                    'Unable to load order:',
+                    err
+                )
+
+                setError(
+                    err.response?.data?.message ||
+                    'Unable to load order details.'
+                )
+            }
+            finally {
+
+                setLoading(false)
             }
         }
-        catch (err) {
-
-            console.error(
-                'Unable to load order:',
-                err
-            )
-
-            setError(
-                err.response?.data?.message ||
-                'Unable to load order details.'
-            )
-        }
-        finally {
-
-            setLoading(false)
-        }
-    }
 
     useEffect(() => {
 
@@ -108,7 +115,7 @@ function OrderSuccessPage() {
     // ========================================================
 
     const formatPrice =
-        (value) =>
+        value =>
             Number(
                 value ?? 0
             ).toLocaleString(
@@ -120,7 +127,7 @@ function OrderSuccessPage() {
             )
 
     const getOrderStatusLabel =
-        (status) => {
+        status => {
 
             switch (status) {
 
@@ -143,12 +150,14 @@ function OrderSuccessPage() {
                     return 'Cancelled'
 
                 default:
-                    return String(status ?? 'Unknown')
+                    return String(
+                        status ?? 'Unknown'
+                    )
             }
         }
 
     const getPaymentStatusLabel =
-        (status) => {
+        status => {
 
             switch (status) {
 
@@ -165,14 +174,25 @@ function OrderSuccessPage() {
                     return 'Refunded'
 
                 default:
-                    return String(status ?? 'Unknown')
+                    return String(
+                        status ?? 'Unknown'
+                    )
             }
         }
 
     const getOrderStatusClass =
-        (status) => {
+        status => {
 
             switch (status) {
+
+                case 2:
+                    return 'info'
+
+                case 3:
+                    return 'info'
+
+                case 4:
+                    return 'info'
 
                 case 5:
                     return 'success'
@@ -180,16 +200,13 @@ function OrderSuccessPage() {
                 case 6:
                     return 'danger'
 
-                case 4:
-                    return 'info'
-
                 default:
                     return 'warning'
             }
         }
 
     const getPaymentStatusClass =
-        (status) => {
+        status => {
 
             switch (status) {
 
@@ -206,6 +223,11 @@ function OrderSuccessPage() {
                     return 'warning'
             }
         }
+
+    const isCod =
+        payment?.paymentMethod
+            ?.toUpperCase() ===
+        'COD'
 
     // ========================================================
     // LOADING
@@ -288,10 +310,6 @@ function OrderSuccessPage() {
 
             <div className="order-success-container">
 
-                {/* ==================================================
-                    SUCCESS HEADER
-                   ================================================== */}
-
                 <section className="order-success-hero">
 
                     <div className="order-success-check">
@@ -307,9 +325,11 @@ function OrderSuccessPage() {
                     </h1>
 
                     <p>
-                        Thank you for your order.
-                        We've received your order and
-                        started processing it.
+
+                        {isCod
+                            ? 'Your order is confirmed. Payment will be collected when your order is delivered.'
+                            : 'Thank you for your order. Your order has been confirmed successfully.'}
+
                     </p>
 
                     <div className="order-number-box">
@@ -326,21 +346,13 @@ function OrderSuccessPage() {
 
                 </section>
 
-                {/* ==================================================
-                    MAIN LAYOUT
-                   ================================================== */}
-
                 <div className="order-success-layout">
 
                     {/* ==================================================
-                        LEFT SIDE
+                        LEFT
                        ================================================== */}
 
                     <section>
-
-                        {/* ==============================================
-                            ORDER ITEMS
-                           ============================================== */}
 
                         <div className="order-success-card">
 
@@ -359,17 +371,21 @@ function OrderSuccessPage() {
                                 </div>
 
                                 <strong>
+
                                     {
                                         order?.orderItems
                                             ?.length ?? 0
                                     }
+
                                     {' '}
+
                                     {
                                         order?.orderItems
                                             ?.length === 1
                                             ? 'item'
                                             : 'items'
                                     }
+
                                 </strong>
 
                             </div>
@@ -377,7 +393,7 @@ function OrderSuccessPage() {
                             <div className="ordered-items-list">
 
                                 {order?.orderItems?.map(
-                                    (item) => (
+                                    item => (
 
                                         <article
                                             className="ordered-item"
@@ -432,10 +448,6 @@ function OrderSuccessPage() {
 
                         </div>
 
-                        {/* ==============================================
-                            SHIPPING
-                           ============================================== */}
-
                         <div className="order-success-card shipping-card">
 
                             <div className="order-card-heading">
@@ -463,14 +475,10 @@ function OrderSuccessPage() {
                     </section>
 
                     {/* ==================================================
-                        RIGHT SIDE
+                        RIGHT
                        ================================================== */}
 
                     <aside>
-
-                        {/* ==============================================
-                            ORDER SUMMARY
-                           ============================================== */}
 
                         <div className="order-success-summary">
 
@@ -492,8 +500,7 @@ function OrderSuccessPage() {
                                     className={
                                         `order-status-badge ${getOrderStatusClass(
                                             order?.status
-                                        )
-                                        }`
+                                        )}`
                                     }
                                 >
                                     {
@@ -505,28 +512,47 @@ function OrderSuccessPage() {
 
                             </div>
 
-                            <div className="order-summary-row">
+                            {!isCod && (
 
-                                <span>
-                                    Payment Status
-                                </span>
+                                <div className="order-summary-row">
 
-                                <span
-                                    className={
-                                        `order-status-badge ${getPaymentStatusClass(
-                                            order?.paymentStatus
-                                        )
-                                        }`
-                                    }
-                                >
-                                    {
-                                        getPaymentStatusLabel(
-                                            order?.paymentStatus
-                                        )
-                                    }
-                                </span>
+                                    <span>
+                                        Payment Status
+                                    </span>
 
-                            </div>
+                                    <span
+                                        className={
+                                            `order-status-badge ${getPaymentStatusClass(
+                                                order?.paymentStatus
+                                            )}`
+                                        }
+                                    >
+                                        {
+                                            getPaymentStatusLabel(
+                                                order?.paymentStatus
+                                            )
+                                        }
+                                    </span>
+
+                                </div>
+
+                            )}
+
+                            {isCod && (
+
+                                <div className="order-summary-row">
+
+                                    <span>
+                                        Payment
+                                    </span>
+
+                                    <span className="order-status-badge warning">
+                                        Pay on Delivery
+                                    </span>
+
+                                </div>
+
+                            )}
 
                             <div className="order-summary-divider" />
 
@@ -546,9 +572,9 @@ function OrderSuccessPage() {
 
                         </div>
 
-                        {/* ==============================================
-                            PAYMENT DETAILS
-                           ============================================== */}
+                        {/* ==================================================
+                            PAYMENT
+                           ================================================== */}
 
                         {payment && (
 
@@ -569,7 +595,11 @@ function OrderSuccessPage() {
                                     </span>
 
                                     <strong>
-                                        {payment.paymentMethod}
+                                        {
+                                            isCod
+                                                ? 'Cash on Delivery'
+                                                : payment.paymentMethod
+                                        }
                                     </strong>
 
                                 </div>
@@ -577,7 +607,11 @@ function OrderSuccessPage() {
                                 <div className="payment-summary-row">
 
                                     <span>
-                                        Amount
+                                        {
+                                            isCod
+                                                ? 'Amount to Pay'
+                                                : 'Amount'
+                                        }
                                     </span>
 
                                     <strong>
@@ -588,46 +622,66 @@ function OrderSuccessPage() {
 
                                 </div>
 
-                                <div className="payment-summary-row">
-
-                                    <span>
-                                        Status
-                                    </span>
-
-                                    <span
-                                        className={
-                                            `order-status-badge ${getPaymentStatusClass(
-                                                payment.status
-                                            )
-                                            }`
-                                        }
-                                    >
-                                        {
-                                            getPaymentStatusLabel(
-                                                payment.status
-                                            )
-                                        }
-                                    </span>
-
-                                </div>
-
-                                {payment.transactionId && (
+                                {isCod ? (
 
                                     <div className="payment-transaction">
 
                                         <span>
-                                            Transaction ID
+                                            Payment Instructions
                                         </span>
 
-                                        <code>
-                                            {
-                                                payment.transactionId
+                                        <strong>
+                                            Please pay ₹{formatPrice(
+                                                payment.amount
+                                            )} when your order is delivered.
+                                        </strong>
+
+                                    </div>
+
+                                ) : (
+
+                                    <div className="payment-summary-row">
+
+                                        <span>
+                                            Status
+                                        </span>
+
+                                        <span
+                                            className={
+                                                `order-status-badge ${getPaymentStatusClass(
+                                                    payment.status
+                                                )}`
                                             }
-                                        </code>
+                                        >
+                                            {
+                                                getPaymentStatusLabel(
+                                                    payment.status
+                                                )
+                                            }
+                                        </span>
 
                                     </div>
 
                                 )}
+
+                                {!isCod &&
+                                    payment.transactionId && (
+
+                                        <div className="payment-transaction">
+
+                                            <span>
+                                                Transaction ID
+                                            </span>
+
+                                            <code>
+                                                {
+                                                    payment.transactionId
+                                                }
+                                            </code>
+
+                                        </div>
+
+                                    )}
 
                             </div>
 
@@ -636,10 +690,6 @@ function OrderSuccessPage() {
                     </aside>
 
                 </div>
-
-                {/* ==================================================
-                    ACTIONS
-                   ================================================== */}
 
                 <section className="order-success-actions">
 
