@@ -1,7 +1,3 @@
-import {
-    Link
-} from 'react-router-dom'
-
 import './AdminDashboardPage.css'
 
 // ============================================================
@@ -10,12 +6,14 @@ import './AdminDashboardPage.css'
 //
 // Admin landing page.
 //
-// Provides quick access to:
-// - Product Management
-// - Category Management
-// - Order Management
-// - Inventory
-// - Admin Data / Archive
+// This page now focuses on:
+// - System overview
+// - Platform capabilities
+// - Architecture overview
+// - Main operational areas
+//
+// Actual management navigation is available from the
+// Admin / Main Admin dropdown in the Navbar.
 // ============================================================
 
 function AdminDashboardPage() {
@@ -35,16 +33,18 @@ function AdminDashboardPage() {
                     <div>
 
                         <span className="admin-dashboard-eyebrow">
-                            Administration
+                            Enterprise Administration
                         </span>
 
                         <h1>
-                            Admin Dashboard
+                            Enterprise E-Commerce Platform
                         </h1>
 
                         <p>
-                            Manage products, categories,
-                            orders and inventory from one place.
+                            Centralized commerce system for managing
+                            products, inventory, customer orders,
+                            payments, users, administrators,
+                            notifications and operational data.
                         </p>
 
                     </div>
@@ -52,7 +52,7 @@ function AdminDashboardPage() {
                 </section>
 
                 {/* ==================================================
-                    QUICK SUMMARY
+                    QUICK SYSTEM SUMMARY
                    ================================================== */}
 
                 <section className="admin-summary-grid">
@@ -60,17 +60,17 @@ function AdminDashboardPage() {
                     <div className="admin-summary-card">
 
                         <span className="admin-summary-icon">
-                            📦
+                            🛒
                         </span>
 
                         <div>
 
                             <span className="admin-summary-label">
-                                Products
+                                Commerce
                             </span>
 
                             <strong>
-                                Product Management
+                                Product & Order Platform
                             </strong>
 
                         </div>
@@ -80,17 +80,17 @@ function AdminDashboardPage() {
                     <div className="admin-summary-card">
 
                         <span className="admin-summary-icon">
-                            🗂
+                            🔐
                         </span>
 
                         <div>
 
                             <span className="admin-summary-label">
-                                Categories
+                                Security
                             </span>
 
                             <strong>
-                                Category Management
+                                JWT & Role Based Access
                             </strong>
 
                         </div>
@@ -100,17 +100,17 @@ function AdminDashboardPage() {
                     <div className="admin-summary-card">
 
                         <span className="admin-summary-icon">
-                            🧾
+                            ⚡
                         </span>
 
                         <div>
 
                             <span className="admin-summary-label">
-                                Orders
+                                Messaging
                             </span>
 
                             <strong>
-                                Order Management
+                                Kafka Event Processing
                             </strong>
 
                         </div>
@@ -120,17 +120,17 @@ function AdminDashboardPage() {
                     <div className="admin-summary-card">
 
                         <span className="admin-summary-icon">
-                            📊
+                            💳
                         </span>
 
                         <div>
 
                             <span className="admin-summary-label">
-                                Inventory
+                                Payments
                             </span>
 
                             <strong>
-                                Stock Management
+                                Razorpay & COD
                             </strong>
 
                         </div>
@@ -140,188 +140,408 @@ function AdminDashboardPage() {
                 </section>
 
                 {/* ==================================================
-                    MANAGEMENT
+                    SYSTEM OVERVIEW
                    ================================================== */}
 
-                <section className="admin-management-section">
+                <section className="admin-system-overview">
 
                     <div className="admin-section-heading">
 
                         <span>
-                            Management
+                            System Overview
                         </span>
 
                         <h2>
-                            Admin Tools
+                            Platform Capabilities
                         </h2>
 
                         <p>
-                            Choose an area to manage.
+                            The system combines customer commerce,
+                            administrative control, secure payments,
+                            real-time event processing and role-based
+                            authorization in one enterprise platform.
                         </p>
 
                     </div>
 
-                    <div className="admin-management-grid">
+                    <div className="admin-overview-grid">
 
                         {/* ==========================================
-                            PRODUCTS
+                            PRODUCT MANAGEMENT
                            ========================================== */}
 
-                        <Link
-                            to="/admin/products"
-                            className="admin-management-card"
-                        >
+                        <article className="admin-overview-card">
 
-                            <div className="admin-management-icon">
-                                📦
+                            <div className="admin-overview-icon">
+                                🛍️
                             </div>
 
-                            <div className="admin-management-content">
+                            <div>
 
                                 <h3>
-                                    Manage Products
+                                    Product & Catalog Management
                                 </h3>
 
                                 <p>
-                                    Create, update and deactivate
-                                    products in the catalog.
+                                    Manage products, categories,
+                                    pricing, availability and product
+                                    information from a centralized
+                                    catalog.
                                 </p>
 
                             </div>
 
-                            <span className="admin-card-arrow">
-                                →
-                            </span>
-
-                        </Link>
-
-                        {/* ==========================================
-                            CATEGORIES
-                           ========================================== */}
-
-                        <Link
-                            to="/admin/categories"
-                            className="admin-management-card"
-                        >
-
-                            <div className="admin-management-icon">
-                                🗂
-                            </div>
-
-                            <div className="admin-management-content">
-
-                                <h3>
-                                    Manage Categories
-                                </h3>
-
-                                <p>
-                                    Create and organize product
-                                    categories.
-                                </p>
-
-                            </div>
-
-                            <span className="admin-card-arrow">
-                                →
-                            </span>
-
-                        </Link>
-
-                        {/* ==========================================
-                            ORDERS
-                           ========================================== */}
-
-                        <Link
-                            to="/admin/orders"
-                            className="admin-management-card"
-                        >
-
-                            <div className="admin-management-icon">
-                                🧾
-                            </div>
-
-                            <div className="admin-management-content">
-
-                                <h3>
-                                    Manage Orders
-                                </h3>
-
-                                <p>
-                                    Review orders and update
-                                    order progress.
-                                </p>
-
-                            </div>
-
-                            <span className="admin-card-arrow">
-                                →
-                            </span>
-
-                        </Link>
+                        </article>
 
                         {/* ==========================================
                             INVENTORY
                            ========================================== */}
 
-                        <Link
-                            to="/admin/inventory"
-                            className="admin-management-card"
-                        >
+                        <article className="admin-overview-card">
 
-                            <div className="admin-management-icon">
-                                📊
+                            <div className="admin-overview-icon">
+                                📦
                             </div>
 
-                            <div className="admin-management-content">
+                            <div>
 
                                 <h3>
-                                    Inventory
+                                    Inventory Management
                                 </h3>
 
                                 <p>
-                                    Monitor stock levels and
-                                    adjust product inventory.
+                                    Track stock quantities, monitor
+                                    available inventory and keep stock
+                                    information synchronized with
+                                    customer orders.
                                 </p>
 
                             </div>
 
-                            <span className="admin-card-arrow">
-                                →
-                            </span>
-
-                        </Link>
+                        </article>
 
                         {/* ==========================================
-                            ADMIN DATA
+                            ORDERS
                            ========================================== */}
 
-                        <Link
-                            to="/admin/data"
-                            className="admin-management-card"
-                        >
+                        <article className="admin-overview-card">
 
-                            <div className="admin-management-icon">
-                                🗄
+                            <div className="admin-overview-icon">
+                                🧾
                             </div>
 
-                            <div className="admin-management-content">
+                            <div>
 
                                 <h3>
-                                    Admin Data
+                                    Order Management
                                 </h3>
 
                                 <p>
-                                    View active and inactive
-                                    products and categories.
+                                    Monitor customer orders, shipping
+                                    information, payment status and
+                                    order progress through the complete
+                                    order lifecycle.
                                 </p>
 
                             </div>
 
-                            <span className="admin-card-arrow">
-                                →
+                        </article>
+
+                        {/* ==========================================
+                            PAYMENTS
+                           ========================================== */}
+
+                        <article className="admin-overview-card">
+
+                            <div className="admin-overview-icon">
+                                💳
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Payment Processing
+                                </h3>
+
+                                <p>
+                                    Supports online payment processing
+                                    with Razorpay as well as Cash on
+                                    Delivery with secure backend payment
+                                    verification.
+                                </p>
+
+                            </div>
+
+                        </article>
+
+                        {/* ==========================================
+                            USERS
+                           ========================================== */}
+
+                        <article className="admin-overview-card">
+
+                            <div className="admin-overview-icon">
+                                👥
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    User & Administrator Control
+                                </h3>
+
+                                <p>
+                                    Manage customer accounts, promote
+                                    users to administrators and control
+                                    administrative access from the Main
+                                    Admin account.
+                                </p>
+
+                            </div>
+
+                        </article>
+
+                        {/* ==========================================
+                            AUTHORIZATION
+                           ========================================== */}
+
+                        <article className="admin-overview-card">
+
+                            <div className="admin-overview-icon">
+                                🔐
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Permission-Based Authorization
+                                </h3>
+
+                                <p>
+                                    Main Admin receives full system
+                                    access while other administrators
+                                    only receive explicitly assigned
+                                    permissions.
+                                </p>
+
+                            </div>
+
+                        </article>
+
+                        {/* ==========================================
+                            KAFKA
+                           ========================================== */}
+
+                        <article className="admin-overview-card">
+
+                            <div className="admin-overview-icon">
+                                ⚡
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Event-Driven Architecture
+                                </h3>
+
+                                <p>
+                                    Apache Kafka handles order,
+                                    payment and order-status events
+                                    between the API and background
+                                    notification services.
+                                </p>
+
+                            </div>
+
+                        </article>
+
+                        {/* ==========================================
+                            EMAIL
+                           ========================================== */}
+
+                        <article className="admin-overview-card">
+
+                            <div className="admin-overview-icon">
+                                ✉️
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Customer Notifications
+                                </h3>
+
+                                <p>
+                                    The Notification Service processes
+                                    Kafka events and sends important
+                                    customer emails for payments,
+                                    confirmations, cancellations and
+                                    delivery updates.
+                                </p>
+
+                            </div>
+
+                        </article>
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
+                    TECHNOLOGY STACK
+                   ================================================== */}
+
+                <section className="admin-architecture-section">
+
+                    <div className="admin-section-heading">
+
+                        <span>
+                            Architecture
+                        </span>
+
+                        <h2>
+                            Technology Stack
+                        </h2>
+
+                        <p>
+                            The platform follows a layered enterprise
+                            architecture designed for maintainability,
+                            scalability and separation of concerns.
+                        </p>
+
+                    </div>
+
+                    <div className="admin-tech-grid">
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                API
                             </span>
 
-                        </Link>
+                            <strong>
+                                ASP.NET Core
+                            </strong>
+
+                            <p>
+                                REST APIs, business orchestration,
+                                authentication and authorization.
+                            </p>
+
+                        </div>
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                Frontend
+                            </span>
+
+                            <strong>
+                                React
+                            </strong>
+
+                            <p>
+                                Responsive customer and administration
+                                interfaces.
+                            </p>
+
+                        </div>
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                Database
+                            </span>
+
+                            <strong>
+                                PostgreSQL
+                            </strong>
+
+                            <p>
+                                Relational persistence using
+                                Entity Framework Core.
+                            </p>
+
+                        </div>
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                Messaging
+                            </span>
+
+                            <strong>
+                                Apache Kafka
+                            </strong>
+
+                            <p>
+                                Asynchronous event communication
+                                between services.
+                            </p>
+
+                        </div>
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                Containers
+                            </span>
+
+                            <strong>
+                                Docker
+                            </strong>
+
+                            <p>
+                                Containerized PostgreSQL, Kafka,
+                                ZooKeeper and application services.
+                            </p>
+
+                        </div>
+
+                        <div className="admin-tech-card">
+
+                            <span>
+                                Security
+                            </span>
+
+                            <strong>
+                                JWT Authentication
+                            </strong>
+
+                            <p>
+                                Role and permission-based access
+                                control across protected endpoints.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
+                    ADMINISTRATION NOTE
+                   ================================================== */}
+
+                <section className="admin-dashboard-note">
+
+                    <div className="admin-dashboard-note-icon">
+                        ℹ️
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            Administration Navigation
+                        </h3>
+
+                        <p>
+                            Product, category, order, inventory,
+                            data, user and access-management tools
+                            are available from the
+                            <strong> Admin / Main Admin </strong>
+                            menu in the navigation bar.
+                        </p>
 
                     </div>
 

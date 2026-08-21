@@ -1,12 +1,5 @@
 namespace EnterpriseECommerce.Domain.Entities;
 
-/// <summary>
-/// Represents an application user.
-///
-/// Authentication-related information such as the password hash
-/// is stored with the user, while authorization is handled through
-/// the associated Role.
-/// </summary>
 public class User
 {
     public Guid Id { get; private set; }
@@ -17,99 +10,297 @@ public class User
 
     public string Email { get; private set; } = string.Empty;
 
-    /// <summary>
-    /// Stores the hashed password.
-    ///
-    /// The application must NEVER store a plain-text password.
-    /// </summary>
     public string PasswordHash { get; private set; } = string.Empty;
 
     public string? PhoneNumber { get; private set; }
 
     public bool IsActive { get; private set; }
 
+    // ============================================================
+    // MAIN ADMIN
+    // ============================================================
+
+    public bool IsMainAdmin { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     public DateTime? UpdatedAt { get; private set; }
 
-    // ------------------------------------------------------------
-    // Authorization
-    // ------------------------------------------------------------
+    // ============================================================
+    // ROLE
+    // ============================================================
 
-    /// <summary>
-    /// Foreign key referencing the user's role.
-    /// </summary>
     public Guid RoleId { get; private set; }
 
-    /// <summary>
-    /// Navigation property used by Entity Framework Core.
-    /// </summary>
     public Role Role { get; private set; } = null!;
 
-    // ------------------------------------------------------------
-    // EF Core constructor
-    // ------------------------------------------------------------
+    // ============================================================
+    // PERMISSIONS
+    // ============================================================
+
+    public ICollection<UserPermission> UserPermissions
+    {
+        get;
+        private set;
+    } = new List<UserPermission>();
+
+    // ============================================================
+    // EF CORE
+    // ============================================================
 
     private User()
     {
     }
 
-    // ------------------------------------------------------------
-    // Application constructor
-    // ------------------------------------------------------------
+    // ============================================================
+    // CONSTRUCTOR
+    // ============================================================
 
     public User(
-     string firstName,
-     string lastName,
-     string email,
-     string passwordHash,
-     Guid roleId,
-     string? phoneNumber = null)
+        string firstName,
+        string lastName,
+        string email,
+        string passwordHash,
+        Guid roleId,
+        string? phoneNumber = null)
     {
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            throw new ArgumentException(
+                "First name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
+            throw new ArgumentException(
+                "Last name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException(
+                "Email is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(passwordHash))
+        {
+            throw new ArgumentException(
+                "Password hash is required.");
+        }
+
+        if (roleId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "Role is required.");
+        }
+
         Id = Guid.NewGuid();
 
-        FirstName = firstName;
-        LastName = lastName;
-        Email = email;
-        PasswordHash = passwordHash;
+        FirstName =
+            firstName.Trim();
 
-        RoleId = roleId;
+        LastName =
+            lastName.Trim();
 
-        PhoneNumber = phoneNumber;
+        Email =
+            email.Trim().ToLowerInvariant();
 
-        IsActive = true;
-        CreatedAt = DateTime.UtcNow;
+        PasswordHash =
+            passwordHash;
+
+        RoleId =
+            roleId;
+
+        PhoneNumber =
+            string.IsNullOrWhiteSpace(phoneNumber)
+                ? null
+                : phoneNumber.Trim();
+
+        IsActive =
+            true;
+
+        IsMainAdmin =
+            false;
+
+        CreatedAt =
+            DateTime.UtcNow;
     }
 
-    // ------------------------------------------------------------
-    // Domain methods
-    // ------------------------------------------------------------
+    // ============================================================
+    // UPDATE PROFILE
+    // ============================================================
 
-    public void UpdateName(string firstName, string lastName)
+    public void UpdateProfile(
+        string firstName,
+        string lastName,
+        string email,
+        string? phoneNumber)
     {
-        FirstName = firstName;
-        LastName = lastName;
+        if (string.IsNullOrWhiteSpace(firstName))
+        {
+            throw new ArgumentException(
+                "First name is required.");
+        }
 
-        UpdatedAt = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(lastName))
+        {
+            throw new ArgumentException(
+                "Last name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException(
+                "Email is required.");
+        }
+
+        FirstName =
+            firstName.Trim();
+
+        LastName =
+            lastName.Trim();
+
+        Email =
+            email.Trim().ToLowerInvariant();
+
+        PhoneNumber =
+            string.IsNullOrWhiteSpace(phoneNumber)
+                ? null
+                : phoneNumber.Trim();
+
+        UpdatedAt =
+            DateTime.UtcNow;
     }
-    /// <summary>
-    /// Associates the user with an application role.
-    ///
-    /// The RoleId foreign key and navigation property are updated
-    /// together so the domain object remains internally consistent.
-    /// </summary>
-    public void AssignRole(Role role)
-    {
-        ArgumentNullException.ThrowIfNull(role);
 
-        Role = role;
-        RoleId = role.Id;
+    // ============================================================
+    // PASSWORD
+    // ============================================================
+
+    public void ChangePasswordHash(
+        string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+        {
+            throw new ArgumentException(
+                "Password hash is required.");
+        }
+
+        PasswordHash =
+            passwordHash;
+
+        UpdatedAt =
+            DateTime.UtcNow;
+    }
+
+    // ============================================================
+    // ROLE
+    // ============================================================
+
+    public void AssignRole(
+        Role role)
+    {
+        ArgumentNullException.ThrowIfNull(
+            role);
+
+        Role =
+            role;
+
+        RoleId =
+            role.Id;
+
+        UpdatedAt =
+            DateTime.UtcNow;
+    }
+
+    // ============================================================
+    // MAIN ADMIN
+    // ============================================================
+
+    public void MarkAsMainAdmin()
+    {
+        IsMainAdmin =
+            true;
+
+        UpdatedAt =
+            DateTime.UtcNow;
+    }
+
+    // ============================================================
+    // STATUS
+    // ============================================================
+
+    public void Activate()
+    {
+        IsActive =
+            true;
+
+        UpdatedAt =
+            DateTime.UtcNow;
     }
 
     public void Deactivate()
     {
-        IsActive = false;
+        if (IsMainAdmin)
+        {
+            throw new InvalidOperationException(
+                "Main Admin cannot be deactivated.");
+        }
 
-        UpdatedAt = DateTime.UtcNow;
+        IsActive =
+            false;
+
+        UpdatedAt =
+            DateTime.UtcNow;
+    }
+
+    // ============================================================
+    // PERMISSIONS
+    // ============================================================
+
+    public void AddPermission(
+        Permission permission)
+    {
+        ArgumentNullException.ThrowIfNull(
+            permission);
+
+        if (UserPermissions.Any(
+            item =>
+                item.PermissionId ==
+                permission.Id))
+        {
+            return;
+        }
+
+        UserPermissions.Add(
+            new UserPermission(
+                Id,
+                permission.Id));
+    }
+
+    public void RemovePermission(
+        Guid permissionId)
+    {
+        var existing =
+            UserPermissions
+                .FirstOrDefault(
+                    item =>
+                        item.PermissionId ==
+                        permissionId);
+
+        if (existing is null)
+        {
+            return;
+        }
+
+        UserPermissions.Remove(
+            existing);
+    }
+
+    public void ClearPermissions()
+    {
+        UserPermissions.Clear();
+
+        UpdatedAt =
+            DateTime.UtcNow;
     }
 }

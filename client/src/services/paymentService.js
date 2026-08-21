@@ -1,33 +1,8 @@
 import apiClient from '../api/apiClient'
 
 // ============================================================
-// PAYMENT SERVICE
+// CREATE INTERNAL PAYMENT
 // ============================================================
-//
-// Handles frontend communication with PaymentsController.
-//
-// React Page
-//     ↓
-// paymentService
-//     ↓
-// apiClient
-//     ↓
-// ASP.NET PaymentsController
-// ============================================================
-
-// ------------------------------------------------------------
-// CREATE PAYMENT
-// ------------------------------------------------------------
-//
-// Backend:
-// POST /api/Payments
-//
-// Request:
-// {
-//   orderId: "...",
-//   paymentMethod: "..."
-// }
-// ------------------------------------------------------------
 
 export async function createPayment(
     orderId,
@@ -45,13 +20,9 @@ export async function createPayment(
     return response.data
 }
 
-// ------------------------------------------------------------
-// GET PAYMENT BY ORDER
-// ------------------------------------------------------------
-//
-// Backend:
-// GET /api/Payments/order/{orderId}
-// ------------------------------------------------------------
+// ============================================================
+// GET PAYMENT
+// ============================================================
 
 export async function getPaymentByOrderId(
     orderId
@@ -64,50 +35,47 @@ export async function getPaymentByOrderId(
     return response.data
 }
 
-// ------------------------------------------------------------
-// MARK PAYMENT SUCCESSFUL
-// ------------------------------------------------------------
-//
-// Backend:
-// POST /api/Payments/{paymentId}/success
-//
-// Request:
-// {
-//   transactionId: "..."
-// }
-//
-// This is currently a testing/simulation endpoint.
-// Later a real payment gateway such as Razorpay or Stripe
-// should call the backend through a verified response/webhook.
-// ------------------------------------------------------------
+// ============================================================
+// CREATE RAZORPAY ORDER
+// ============================================================
 
-export async function markPaymentSuccessful(
-    paymentId,
-    transactionId
+export async function createRazorpayOrder(
+    paymentId
 ) {
     const response =
         await apiClient.post(
-            `/Payments/${paymentId}/success`,
+            `/Payments/${paymentId}/razorpay-order`
+        )
+
+    return response.data
+}
+
+// ============================================================
+// VERIFY RAZORPAY PAYMENT
+// ============================================================
+
+export async function verifyRazorpayPayment(
+    paymentId,
+    razorpayPaymentId,
+    razorpayOrderId,
+    razorpaySignature
+) {
+    const response =
+        await apiClient.post(
+            `/Payments/${paymentId}/razorpay-verify`,
             {
-                transactionId
+                razorpayPaymentId,
+                razorpayOrderId,
+                razorpaySignature
             }
         )
 
     return response.data
 }
 
-// ------------------------------------------------------------
-// MARK PAYMENT FAILED
-// ------------------------------------------------------------
-//
-// Backend:
-// POST /api/Payments/{paymentId}/fail
-//
-// Request:
-// {
-//   reason: "..."
-// }
-// ------------------------------------------------------------
+// ============================================================
+// FAILED PAYMENT
+// ============================================================
 
 export async function markPaymentFailed(
     paymentId,

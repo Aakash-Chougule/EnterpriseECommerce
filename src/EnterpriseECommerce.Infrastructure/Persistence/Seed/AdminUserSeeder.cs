@@ -1,52 +1,23 @@
 using EnterpriseECommerce.Domain.Entities;
 using EnterpriseECommerce.Infrastructure.Security;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace EnterpriseECommerce.Infrastructure.Persistence.Seed;
 
-/// <summary>
-/// Seeds the initial administrator account.
-///
-/// This seeder is idempotent, meaning it can safely execute every
-/// time the application starts without creating duplicate users.
-///
-/// The administrator is created only when the configured admin
-/// account does not already exist.
-/// </summary>
 public static class AdminUserSeeder
 {
-    /// <summary>
-    /// Creates the initial administrator account if it does not exist.
-    /// </summary>
-    /// <param name="context">
-    /// Application database context used to access PostgreSQL.
-    /// </param>
-    public static async Task SeedAsync(AppDbContext context)
+    public static async Task SeedAsync(
+        AppDbContext context)
     {
-        // ------------------------------------------------------------
-        // Find the Admin role.
-        // ------------------------------------------------------------
-        // The Admin role must be created by RoleSeeder before this
-        // seeder runs.
-        // ------------------------------------------------------------
-
-        var adminRole = await context.Roles
-            .FirstOrDefaultAsync(role => role.Name == "Admin");
-
-        if (adminRole is null)
-        {
-            throw new InvalidOperationException(
-                "Admin role must exist before the Admin user can be seeded.");
-        }
-
-        // ------------------------------------------------------------
-        // Define the initial administrator account.
-        // ------------------------------------------------------------
-        // This account is used only for local/development setup.
-        //
-        // In production, these values should come from secure
-        // environment variables or a secret-management service.
-        // ------------------------------------------------------------
+        var adminRole =
+            await context.Roles
+                .FirstOrDefaultAsync(
+                    role =>
+                        role.Name ==
+                        "Admin")
+            ?? throw new InvalidOperationException(
+                "Admin role must exist.");
 
         const string adminEmail =
             "admin@enterpriseecommerce.com";
@@ -54,52 +25,66 @@ public static class AdminUserSeeder
         const string adminPassword =
             "Admin@12345";
 
-        // ------------------------------------------------------------
-        // Check whether the administrator already exists.
-        // ------------------------------------------------------------
-        // Because the Email column is unique, we use the email to
-        // identify the initial administrator.
-        //
-        // If the user already exists, we do nothing.
-        // ------------------------------------------------------------
+        var adminUser =
+            await context.Users
+                .Include(
+                    user =>
+                        user.UserPermissions)
+                .ThenInclude(
+                    item =>
+                        item.Permission)
+                .FirstOrDefaultAsync(
+                    user =>
+                        user.Email ==
+                        adminEmail);
 
-        var existingAdmin = await context.Users
-            .FirstOrDefaultAsync(user => user.Email == adminEmail);
-
-        if (existingAdmin is not null)
+        if (adminUser is null)
         {
-            return;
+            var passwordHasher =
+                new BCryptPasswordHasher();
+
+            adminUser =
+                new User(
+                    "System",
+                    "Administrator",
+                    adminEmail,
+                    passwordHasher.Hash(
+                        adminPassword),
+                    adminRole.Id);
+
+            context.Users.Add(
+                adminUser);
+
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            adminUser.AssignRole(
+                adminRole);
         }
 
-        // ------------------------------------------------------------
-        // Hash the administrator password.
-        // ------------------------------------------------------------
-        // NEVER store a plain-text password in the database.
-        //
-        // BCrypt automatically generates a salt and securely hashes
-        // the supplied password.
-        // ------------------------------------------------------------
+        // ========================================================
+        // PERMANENT MAIN ADMIN
+        // ========================================================
 
-        var passwordHasher = new BCryptPasswordHasher();
+        adminUser.MarkAsMainAdmin();
 
-        var passwordHash = passwordHasher.Hash(adminPassword);
+        adminUser.Activate();
 
-        // ------------------------------------------------------------
-        // Create the administrator user.
-        // ------------------------------------------------------------
+        // ========================================================
+        // GIVE MAIN ADMIN ALL PERMISSIONS
+        // ========================================================
 
-        var adminUser = new User(
-            firstName: "System",
-            lastName: "Administrator",
-            email: adminEmail,
-            passwordHash: passwordHash,
-            roleId: adminRole.Id);
+        var allPermissions =
+            await context.Permissions
+                .ToListAsync();
 
-        // ------------------------------------------------------------
-        // Add the administrator to the database.
-        // ------------------------------------------------------------
-
-        context.Users.Add(adminUser);
+        foreach (var permission in
+                 allPermissions)
+        {
+            adminUser.AddPermission(
+                permission);
+        }
 
         await context.SaveChangesAsync();
     }

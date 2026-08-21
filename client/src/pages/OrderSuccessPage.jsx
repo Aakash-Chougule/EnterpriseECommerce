@@ -129,7 +129,7 @@ function OrderSuccessPage() {
     const getOrderStatusLabel =
         status => {
 
-            switch (status) {
+            switch (Number(status)) {
 
                 case 1:
                     return 'Pending'
@@ -159,7 +159,7 @@ function OrderSuccessPage() {
     const getPaymentStatusLabel =
         status => {
 
-            switch (status) {
+            switch (Number(status)) {
 
                 case 1:
                     return 'Pending'
@@ -183,14 +183,10 @@ function OrderSuccessPage() {
     const getOrderStatusClass =
         status => {
 
-            switch (status) {
+            switch (Number(status)) {
 
                 case 2:
-                    return 'info'
-
                 case 3:
-                    return 'info'
-
                 case 4:
                     return 'info'
 
@@ -208,7 +204,7 @@ function OrderSuccessPage() {
     const getPaymentStatusClass =
         status => {
 
-            switch (status) {
+            switch (Number(status)) {
 
                 case 2:
                     return 'success'
@@ -224,10 +220,56 @@ function OrderSuccessPage() {
             }
         }
 
+    // ========================================================
+    // PAYMENT HELPERS
+    // ========================================================
+
+    const normalizedPaymentMethod =
+        String(
+            payment?.paymentMethod ?? ''
+        )
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, '')
+
     const isCod =
-        payment?.paymentMethod
-            ?.toUpperCase() ===
-        'COD'
+        normalizedPaymentMethod === 'COD' ||
+        normalizedPaymentMethod === 'CASHONDELIVERY'
+
+    const paymentStatus =
+        Number(
+            payment?.status
+        )
+
+    const isPaymentPending =
+        paymentStatus === 1
+
+    const isPaymentSuccessful =
+        paymentStatus === 2
+
+    const isPaymentFailed =
+        paymentStatus === 3
+
+    const canContinuePayment =
+        payment !== null &&
+        !isCod &&
+        isPaymentPending
+
+    // ========================================================
+    // CONTINUE PAYMENT
+    // ========================================================
+
+    const handleContinuePayment =
+        () => {
+
+            if (!orderId) {
+                return
+            }
+
+            navigate(
+                `/payment/${orderId}`
+            )
+        }
 
     // ========================================================
     // LOADING
@@ -310,6 +352,10 @@ function OrderSuccessPage() {
 
             <div className="order-success-container">
 
+                {/* ==================================================
+                    HERO
+                   ================================================== */}
+
                 <section className="order-success-hero">
 
                     <div className="order-success-check">
@@ -317,18 +363,42 @@ function OrderSuccessPage() {
                     </div>
 
                     <span className="order-success-eyebrow">
-                        Order confirmed
+
+                        {
+                            canContinuePayment
+                                ? 'Payment required'
+                                : 'Order confirmed'
+                        }
+
                     </span>
 
                     <h1>
-                        Order Placed Successfully
+
+                        {
+                            canContinuePayment
+                                ? 'Order Created Successfully'
+                                : 'Order Placed Successfully'
+                        }
+
                     </h1>
 
                     <p>
 
-                        {isCod
-                            ? 'Your order is confirmed. Payment will be collected when your order is delivered.'
-                            : 'Thank you for your order. Your order has been confirmed successfully.'}
+                        {
+                            isCod
+                                ? 'Your order is confirmed. Payment will be collected when your order is delivered.'
+
+                                : canContinuePayment
+                                    ? 'Your order has been created, but your payment is still pending. Continue the payment to complete your purchase.'
+
+                                    : isPaymentSuccessful
+                                        ? 'Thank you for your order. Your payment has been completed successfully.'
+
+                                        : isPaymentFailed
+                                            ? 'Your order has been created, but the payment was not completed.'
+
+                                            : 'Thank you for your order. Your order has been confirmed successfully.'
+                        }
 
                     </p>
 
@@ -346,6 +416,10 @@ function OrderSuccessPage() {
 
                 </section>
 
+                {/* ==================================================
+                    MAIN LAYOUT
+                   ================================================== */}
+
                 <div className="order-success-layout">
 
                     {/* ==================================================
@@ -353,6 +427,10 @@ function OrderSuccessPage() {
                        ================================================== */}
 
                     <section>
+
+                        {/* ==============================================
+                            ORDERED ITEMS
+                           ============================================== */}
 
                         <div className="order-success-card">
 
@@ -402,10 +480,12 @@ function OrderSuccessPage() {
 
                                             <div className="ordered-item-icon">
 
-                                                {item.productName
-                                                    ?.charAt(0)
-                                                    .toUpperCase()
-                                                    || 'P'}
+                                                {
+                                                    item.productName
+                                                        ?.charAt(0)
+                                                        .toUpperCase()
+                                                    || 'P'
+                                                }
 
                                             </div>
 
@@ -416,11 +496,15 @@ function OrderSuccessPage() {
                                                 </h3>
 
                                                 <p>
+
                                                     ₹{formatPrice(
                                                         item.unitPrice
                                                     )}
+
                                                     {' × '}
+
                                                     {item.quantity}
+
                                                 </p>
 
                                             </div>
@@ -432,9 +516,11 @@ function OrderSuccessPage() {
                                                 </span>
 
                                                 <strong>
+
                                                     ₹{formatPrice(
                                                         item.totalPrice
                                                     )}
+
                                                 </strong>
 
                                             </div>
@@ -447,6 +533,10 @@ function OrderSuccessPage() {
                             </div>
 
                         </div>
+
+                        {/* ==============================================
+                            SHIPPING ADDRESS
+                           ============================================== */}
 
                         <div className="order-success-card shipping-card">
 
@@ -480,6 +570,10 @@ function OrderSuccessPage() {
 
                     <aside>
 
+                        {/* ==============================================
+                            ORDER SUMMARY
+                           ============================================== */}
+
                         <div className="order-success-summary">
 
                             <span className="summary-eyebrow">
@@ -503,11 +597,13 @@ function OrderSuccessPage() {
                                         )}`
                                     }
                                 >
+
                                     {
                                         getOrderStatusLabel(
                                             order?.status
                                         )
                                     }
+
                                 </span>
 
                             </div>
@@ -523,15 +619,19 @@ function OrderSuccessPage() {
                                     <span
                                         className={
                                             `order-status-badge ${getPaymentStatusClass(
+                                                payment?.status ??
                                                 order?.paymentStatus
                                             )}`
                                         }
                                     >
+
                                         {
                                             getPaymentStatusLabel(
+                                                payment?.status ??
                                                 order?.paymentStatus
                                             )
                                         }
+
                                     </span>
 
                                 </div>
@@ -563,9 +663,11 @@ function OrderSuccessPage() {
                                 </span>
 
                                 <strong>
+
                                     ₹{formatPrice(
                                         order?.totalAmount
                                     )}
+
                                 </strong>
 
                             </div>
@@ -573,7 +675,7 @@ function OrderSuccessPage() {
                         </div>
 
                         {/* ==================================================
-                            PAYMENT
+                            PAYMENT DETAILS
                            ================================================== */}
 
                         {payment && (
@@ -588,6 +690,8 @@ function OrderSuccessPage() {
                                     Payment Details
                                 </h2>
 
+                                {/* METHOD */}
+
                                 <div className="payment-summary-row">
 
                                     <span>
@@ -595,32 +699,42 @@ function OrderSuccessPage() {
                                     </span>
 
                                     <strong>
+
                                         {
                                             isCod
                                                 ? 'Cash on Delivery'
                                                 : payment.paymentMethod
                                         }
+
                                     </strong>
 
                                 </div>
 
+                                {/* AMOUNT */}
+
                                 <div className="payment-summary-row">
 
                                     <span>
+
                                         {
                                             isCod
                                                 ? 'Amount to Pay'
                                                 : 'Amount'
                                         }
+
                                     </span>
 
                                     <strong>
+
                                         ₹{formatPrice(
                                             payment.amount
                                         )}
+
                                     </strong>
 
                                 </div>
+
+                                {/* COD */}
 
                                 {isCod ? (
 
@@ -631,38 +745,79 @@ function OrderSuccessPage() {
                                         </span>
 
                                         <strong>
+
                                             Please pay ₹{formatPrice(
                                                 payment.amount
                                             )} when your order is delivered.
+
                                         </strong>
 
                                     </div>
 
                                 ) : (
 
-                                    <div className="payment-summary-row">
+                                    <>
 
-                                        <span>
-                                            Status
-                                        </span>
+                                        {/* PAYMENT STATUS */}
 
-                                        <span
-                                            className={
-                                                `order-status-badge ${getPaymentStatusClass(
-                                                    payment.status
-                                                )}`
-                                            }
-                                        >
-                                            {
-                                                getPaymentStatusLabel(
-                                                    payment.status
-                                                )
-                                            }
-                                        </span>
+                                        <div className="payment-summary-row">
 
-                                    </div>
+                                            <span>
+                                                Status
+                                            </span>
+
+                                            <span
+                                                className={
+                                                    `order-status-badge ${getPaymentStatusClass(
+                                                        payment.status
+                                                    )}`
+                                                }
+                                            >
+
+                                                {
+                                                    getPaymentStatusLabel(
+                                                        payment.status
+                                                    )
+                                                }
+
+                                            </span>
+
+                                        </div>
+
+                                        {/* ==================================
+                                            CONTINUE PAYMENT
+                                           ================================== */}
+
+                                        {canContinuePayment && (
+
+                                            <div
+                                                style={{
+                                                    marginTop: '18px'
+                                                }}
+                                            >
+
+                                                <button
+                                                    type="button"
+                                                    className="success-primary-button"
+                                                    style={{
+                                                        width: '100%'
+                                                    }}
+                                                    onClick={
+                                                        handleContinuePayment
+                                                    }
+                                                >
+                                                    Continue Payment
+                                                </button>
+
+                                            </div>
+
+                                        )}
+
+                                    </>
 
                                 )}
+
+                                {/* TRANSACTION ID */}
 
                                 {!isCod &&
                                     payment.transactionId && (
@@ -690,6 +845,16 @@ function OrderSuccessPage() {
                     </aside>
 
                 </div>
+
+                {/* ==================================================
+                    BOTTOM ACTIONS
+                   ==================================================
+                   
+                    IMPORTANT:
+                    Continue Payment is intentionally NOT here.
+                    
+                    It appears only once inside Payment Details.
+                   ================================================== */}
 
                 <section className="order-success-actions">
 

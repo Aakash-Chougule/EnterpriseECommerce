@@ -10,91 +10,135 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace EnterpriseECommerce.Infrastructure.Security;
 
-/// <summary>
-/// Generates JWT access tokens for authenticated users.
-///
-/// This implementation belongs to Infrastructure because JWT
-/// is an external/security implementation detail. The Application
-/// layer only depends on IJwtTokenService.
-/// </summary>
-public class JwtTokenService : IJwtTokenService
+public class JwtTokenService :
+    IJwtTokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly IConfiguration
+        _configuration;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(
+        IConfiguration configuration)
     {
-        _configuration = configuration;
+        _configuration =
+            configuration;
     }
 
-    /// <summary>
-    /// Generates a signed JWT containing the user's identity
-    /// and authorization role.
-    /// </summary>
-    public string GenerateToken(User user)
+    public string GenerateToken(
+        User user)
     {
-        var jwtSettings = _configuration.GetSection("Jwt");
+        var jwtSettings =
+            _configuration
+                .GetSection(
+                    "Jwt");
 
-        var secretKey = jwtSettings["SecretKey"]
+        var secretKey =
+            jwtSettings[
+                "SecretKey"]
             ?? throw new InvalidOperationException(
                 "JWT SecretKey is not configured.");
 
-        var issuer = jwtSettings["Issuer"]
+        var issuer =
+            jwtSettings[
+                "Issuer"]
             ?? throw new InvalidOperationException(
                 "JWT Issuer is not configured.");
 
-        var audience = jwtSettings["Audience"]
+        var audience =
+            jwtSettings[
+                "Audience"]
             ?? throw new InvalidOperationException(
                 "JWT Audience is not configured.");
 
         var expirationMinutes =
-            int.Parse(jwtSettings["ExpirationMinutes"] ?? "60");
+            int.Parse(
+                jwtSettings[
+                    "ExpirationMinutes"]
+                ?? "60");
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(secretKey));
+        var key =
+            new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    secretKey));
 
-        var credentials = new SigningCredentials(
-            key,
-            SecurityAlgorithms.HmacSha256);
+        var credentials =
+            new SigningCredentials(
+                key,
+                SecurityAlgorithms.HmacSha256);
 
-        // Claims represent information about the authenticated user.
-        var claims = new List<Claim>
+        var claims =
+            new List<Claim>
+            {
+                new(
+                    JwtRegisteredClaimNames.Sub,
+                    user.Id.ToString()),
+
+                new(
+                    JwtRegisteredClaimNames.Email,
+                    user.Email),
+
+                new(
+                    ClaimTypes.Role,
+                    user.Role.Name),
+
+                new(
+                    ClaimTypes.NameIdentifier,
+                    user.Id.ToString()),
+
+                new(
+                    ClaimTypes.Name,
+                    $"{user.FirstName} {user.LastName}"),
+
+                new(
+                    "is_main_admin",
+                    user.IsMainAdmin
+                        ? "true"
+                        : "false")
+            };
+
+        foreach (var permission in
+                 user.UserPermissions)
         {
-            // Unique user identifier.
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            claims.Add(
+                new Claim(
+                    "permission",
+                    permission.Permission.Name));
+        }
 
-            // User email.
-            new(JwtRegisteredClaimNames.Email, user.Email),
+        var expiration =
+            DateTime.UtcNow.AddMinutes(
+                expirationMinutes);
 
-            // ASP.NET Core uses this claim for role-based authorization.
-            new(ClaimTypes.Role, user.Role.Name),
+        var token =
+            new JwtSecurityToken(
+                issuer:
+                    issuer,
 
-            // Useful for identifying the user inside the application.
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                audience:
+                    audience,
 
-            new(ClaimTypes.Name, $"{user.FirstName} {user.LastName}")
-        };
+                claims:
+                    claims,
 
-        var expiration = DateTime.UtcNow.AddMinutes(expirationMinutes);
+                expires:
+                    expiration,
 
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: expiration,
-            signingCredentials: credentials);
+                signingCredentials:
+                    credentials);
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new JwtSecurityTokenHandler()
+            .WriteToken(
+                token);
     }
 
-    /// <summary>
-    /// Returns the expiration time configured for access tokens.
-    /// </summary>
     public DateTime GetExpirationTime()
     {
         var expirationMinutes =
             int.Parse(
-                _configuration["Jwt:ExpirationMinutes"] ?? "60");
+                _configuration[
+                    "Jwt:ExpirationMinutes"]
+                ?? "60");
 
-        return DateTime.UtcNow.AddMinutes(expirationMinutes);
+        return DateTime.UtcNow.AddMinutes(
+            expirationMinutes);
     }
 }

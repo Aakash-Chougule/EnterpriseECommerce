@@ -22,22 +22,22 @@ public class AppDbContext : DbContext
     {
     }
 
-    // Represents the Users table in PostgreSQL.
     public DbSet<User> Users => Set<User>();
 
-    // Represents the Roles table in PostgreSQL.
     public DbSet<Role> Roles => Set<Role>();
 
-    // Represents the Categories table in PostgreSQL.
+    public DbSet<Permission> Permissions =>
+        Set<Permission>();
+
+    public DbSet<UserPermission> UserPermissions =>
+        Set<UserPermission>();
+
     public DbSet<Category> Categories => Set<Category>();
 
-    // Represents the Products table in PostgreSQL.
     public DbSet<Product> Products => Set<Product>();
 
-    // Represents the Orders table in PostgreSQL.
     public DbSet<Order> Orders => Set<Order>();
 
-    // Represents the OrderItems table in PostgreSQL.
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
     public DbSet<Payment> Payments => Set<Payment>();

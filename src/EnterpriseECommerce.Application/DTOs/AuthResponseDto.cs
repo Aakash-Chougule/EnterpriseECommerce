@@ -20,6 +20,10 @@ public class AuthResponseDto
     /// </summary>
     public string AccessToken { get; set; } = string.Empty;
 
+    public bool IsMainAdmin { get; set; }
+
+    public List<string> Permissions { get; set; } = [];
+
     /// <summary>
     /// Token expiration time in UTC.
     /// </summary>

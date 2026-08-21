@@ -3,6 +3,7 @@ using System;
 using EnterpriseECommerce.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260821120433_AddRazorpayPaymentFields")]
+    partial class AddRazorpayPaymentFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -227,29 +230,6 @@ namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
                     b.ToTable("Payments", (string)null);
                 });
 
-            modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.Permission", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Permissions", (string)null);
-                });
-
             modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -345,11 +325,6 @@ namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsMainAdmin")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -377,21 +352,6 @@ namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.UserPermission", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PermissionId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("UserId", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("UserPermissions", (string)null);
                 });
 
             modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.CartItem", b =>
@@ -447,25 +407,6 @@ namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.UserPermission", b =>
-                {
-                    b.HasOne("EnterpriseECommerce.Domain.Entities.Permission", "Permission")
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EnterpriseECommerce.Domain.Entities.User", "User")
-                        .WithMany("UserPermissions")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Permission");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.Cart", b =>
                 {
                     b.Navigation("Items");
@@ -474,11 +415,6 @@ namespace EnterpriseECommerce.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
-                });
-
-            modelBuilder.Entity("EnterpriseECommerce.Domain.Entities.User", b =>
-                {
-                    b.Navigation("UserPermissions");
                 });
 #pragma warning restore 612, 618
         }

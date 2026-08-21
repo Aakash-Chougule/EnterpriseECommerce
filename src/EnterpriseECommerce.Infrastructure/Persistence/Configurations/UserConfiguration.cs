@@ -1,84 +1,92 @@
 using EnterpriseECommerce.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EnterpriseECommerce.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Defines the PostgreSQL mapping and database constraints for the User entity.
-/// </summary>
-public class UserConfiguration : IEntityTypeConfiguration<User>
+public class UserConfiguration :
+    IEntityTypeConfiguration<User>
 {
-    public void Configure(EntityTypeBuilder<User> builder)
+    public void Configure(
+        EntityTypeBuilder<User> builder)
     {
-        // --------------------------------------------------------
-        // Table configuration
-        // --------------------------------------------------------
+        builder.ToTable(
+            "Users");
 
-        builder.ToTable("Users");
+        builder.HasKey(
+            user =>
+                user.Id);
 
-        // --------------------------------------------------------
-        // Primary key
-        // --------------------------------------------------------
-
-        builder.HasKey(user => user.Id);
-
-        // --------------------------------------------------------
-        // User properties
-        // --------------------------------------------------------
-
-        builder.Property(user => user.FirstName)
+        builder.Property(
+                user =>
+                    user.FirstName)
             .IsRequired()
             .HasMaxLength(100);
 
-        builder.Property(user => user.LastName)
+        builder.Property(
+                user =>
+                    user.LastName)
             .IsRequired()
             .HasMaxLength(100);
 
-        builder.Property(user => user.Email)
+        builder.Property(
+                user =>
+                    user.Email)
             .IsRequired()
             .HasMaxLength(255);
 
-        builder.Property(user => user.PasswordHash)
+        builder.Property(
+                user =>
+                    user.PasswordHash)
             .IsRequired();
 
-        builder.Property(user => user.PhoneNumber)
+        builder.Property(
+                user =>
+                    user.PhoneNumber)
             .HasMaxLength(20);
 
-        builder.Property(user => user.IsActive)
+        builder.Property(
+                user =>
+                    user.IsActive)
             .IsRequired();
 
-        builder.Property(user => user.CreatedAt)
+        builder.Property(
+                user =>
+                    user.IsMainAdmin)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(
+                user =>
+                    user.CreatedAt)
             .IsRequired();
 
-        // --------------------------------------------------------
-        // Email uniqueness
-        // --------------------------------------------------------
-        // Prevents multiple users from registering with
-        // the same email address.
-        // --------------------------------------------------------
-
-        builder.HasIndex(user => user.Email)
+        builder.HasIndex(
+                user =>
+                    user.Email)
             .IsUnique();
 
-        // --------------------------------------------------------
-        // User -> Role relationship
-        // --------------------------------------------------------
-        // Many users can have the same role.
-        //
-        // Example:
-        //
-        // Admin Role
-        //    ├── User 1
-        //    ├── User 2
-        //    └── User 3
-        //
-        // The RoleId column in Users acts as the foreign key.
-        // --------------------------------------------------------
-
-        builder.HasOne(user => user.Role)
+        builder.HasOne(
+                user =>
+                    user.Role)
             .WithMany()
-            .HasForeignKey(user => user.RoleId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(
+                user =>
+                    user.RoleId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
+
+        builder.HasMany(
+                user =>
+                    user.UserPermissions)
+            .WithOne(
+                permission =>
+                    permission.User)
+            .HasForeignKey(
+                permission =>
+                    permission.UserId)
+            .OnDelete(
+                DeleteBehavior.Cascade);
     }
 }

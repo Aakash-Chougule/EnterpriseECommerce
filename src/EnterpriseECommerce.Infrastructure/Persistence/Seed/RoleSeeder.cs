@@ -1,45 +1,52 @@
 using EnterpriseECommerce.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace EnterpriseECommerce.Infrastructure.Persistence.Seed;
 
-/// <summary>
-/// Seeds the default application roles required by the system.
-///
-/// These roles are created automatically when the application
-/// initializes the database.
-/// </summary>
 public static class RoleSeeder
 {
-    /// <summary>
-    /// Creates the default roles if they do not already exist.
-    /// </summary>
-    public static async Task SeedAsync(AppDbContext context)
+    public static async Task SeedAsync(
+        AppDbContext context)
     {
-        // Check whether roles have already been created.
-        if (await context.Roles.AnyAsync())
+        await EnsureRoleAsync(
+            context,
+            "Admin",
+            "Administrative user with individually assigned permissions.");
+
+        await EnsureRoleAsync(
+            context,
+            "Manager",
+            "Manager account.");
+
+        await EnsureRoleAsync(
+            context,
+            "Customer",
+            "Customer account.");
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureRoleAsync(
+        AppDbContext context,
+        string name,
+        string description)
+    {
+        var exists =
+            await context.Roles
+                .AnyAsync(
+                    role =>
+                        role.Name ==
+                        name);
+
+        if (exists)
         {
             return;
         }
 
-        // Create the roles used by the application.
-        var roles = new List<Role>
-        {
+        context.Roles.Add(
             new Role(
-                "Admin",
-                "Full access to the e-commerce platform."),
-
-            new Role(
-                "Manager",
-                "Can manage products and orders."),
-
-            new Role(
-                "Customer",
-                "Can browse products and place orders.")
-        };
-
-        await context.Roles.AddRangeAsync(roles);
-
-        await context.SaveChangesAsync();
+                name,
+                description));
     }
 }

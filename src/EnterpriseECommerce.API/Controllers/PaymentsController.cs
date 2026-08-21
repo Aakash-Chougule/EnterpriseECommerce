@@ -1,6 +1,7 @@
 using System.Security.Claims;
 
 using EnterpriseECommerce.Application.DTOs;
+using EnterpriseECommerce.Application.Interfaces;
 using EnterpriseECommerce.Application.Services;
 
 using Microsoft.AspNetCore.Authorization;
@@ -13,235 +14,322 @@ namespace EnterpriseECommerce.API.Controllers;
 [Authorize]
 public class PaymentsController : ControllerBase
 {
-    private readonly PaymentService _paymentService;
+    private readonly PaymentService
+        _paymentService;
 
-    public PaymentsController(PaymentService paymentService)
+    private readonly IRazorpayPaymentService
+        _razorpayPaymentService;
+
+    public PaymentsController(
+        PaymentService paymentService,
+        IRazorpayPaymentService razorpayPaymentService)
     {
-        _paymentService = paymentService;
+        _paymentService =
+            paymentService;
+
+        _razorpayPaymentService =
+            razorpayPaymentService;
     }
 
-    // ------------------------------------------------------------
-    // POST: api/Payments
-    // ------------------------------------------------------------
+    // ============================================================
+    // CREATE INTERNAL PAYMENT
+    // ============================================================
 
     [HttpPost]
-    public async Task<ActionResult<PaymentDto>> CreatePayment(
-        [FromBody] CreatePaymentRequest request)
+    public async Task<ActionResult<PaymentDto>>
+        CreatePayment(
+            [FromBody]
+            CreatePaymentRequest request)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized();
         }
 
         try
         {
             var payment =
-                await _paymentService.CreatePaymentAsync(
-                    userId.Value,
-                    request);
+                await _paymentService
+                    .CreatePaymentAsync(
+                        userId.Value,
+                        request);
 
-            return Ok(payment);
+            return Ok(
+                payment);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
     }
 
-    // ------------------------------------------------------------
-    // GET: api/Payments/order/{orderId}
-    // ------------------------------------------------------------
+    // ============================================================
+    // GET PAYMENT BY ORDER
+    // ============================================================
 
     [HttpGet("order/{orderId:guid}")]
-    public async Task<ActionResult<PaymentDto>> GetByOrderId(
-        Guid orderId)
+    public async Task<ActionResult<PaymentDto>>
+        GetByOrderId(
+            Guid orderId)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized();
         }
 
         var payment =
-            await _paymentService.GetPaymentByOrderIdAsync(
-                userId.Value,
-                orderId);
+            await _paymentService
+                .GetPaymentByOrderIdAsync(
+                    userId.Value,
+                    orderId);
 
         if (payment is null)
         {
-            return NotFound(new
-            {
-                message = "Payment not found."
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        "Payment not found."
+                });
         }
 
-        return Ok(payment);
+        return Ok(
+            payment);
     }
 
-    // ------------------------------------------------------------
-    // POST: api/Payments/{paymentId}/success
-    // ------------------------------------------------------------
-    //
-    // Temporary/testing endpoint.
-    //
-    // Later, when Razorpay/Stripe is integrated, this operation
-    // should normally be triggered after verified gateway response
-    // or webhook processing.
-    // ------------------------------------------------------------
+    // ============================================================
+    // CREATE RAZORPAY ORDER
+    // ============================================================
 
-    [HttpPost("{paymentId:guid}/success")]
-    public async Task<ActionResult<PaymentDto>> MarkSuccessful(
-        Guid paymentId,
-        [FromBody] PaymentSuccessRequest request)
+    [HttpPost("{paymentId:guid}/razorpay-order")]
+    public async Task<ActionResult<RazorpayOrderDto>>
+        CreateRazorpayOrder(
+            Guid paymentId,
+            CancellationToken cancellationToken)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized();
+        }
+
+        try
+        {
+            var result =
+                await _razorpayPaymentService
+                    .CreateOrderAsync(
+                        userId.Value,
+                        paymentId,
+                        cancellationToken);
+
+            return Ok(
+                result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+    }
+
+    // ============================================================
+    // VERIFY RAZORPAY PAYMENT
+    // ============================================================
+
+    [HttpPost("{paymentId:guid}/razorpay-verify")]
+    public async Task<ActionResult<PaymentDto>>
+        VerifyRazorpayPayment(
+            Guid paymentId,
+            [FromBody]
+            VerifyRazorpayPaymentRequest request,
+            CancellationToken cancellationToken)
+    {
+        var userId =
+            GetUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized();
         }
 
         try
         {
             var payment =
-                await _paymentService.MarkPaymentSuccessfulAsync(
-                    userId.Value,
-                    paymentId,
-                    request.TransactionId);
+                await _razorpayPaymentService
+                    .VerifyPaymentAsync(
+                        userId.Value,
+                        paymentId,
+                        request,
+                        cancellationToken);
 
-            return Ok(payment);
+            return Ok(
+                payment);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
     }
 
-    // ------------------------------------------------------------
-    // POST: api/Payments/{paymentId}/fail
-    // ------------------------------------------------------------
+    // ============================================================
+    // PAYMENT FAILURE
+    // ============================================================
 
     [HttpPost("{paymentId:guid}/fail")]
-    public async Task<ActionResult<PaymentDto>> MarkFailed(
-        Guid paymentId,
-        [FromBody] PaymentFailureRequest request)
+    public async Task<ActionResult<PaymentDto>>
+        MarkFailed(
+            Guid paymentId,
+            [FromBody]
+            PaymentFailureRequest request)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized();
         }
 
         try
         {
             var payment =
-                await _paymentService.MarkPaymentFailedAsync(
-                    userId.Value,
-                    paymentId,
-                    request.Reason);
+                await _paymentService
+                    .MarkPaymentFailedAsync(
+                        userId.Value,
+                        paymentId,
+                        request.Reason);
 
-            return Ok(payment);
+            return Ok(
+                payment);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
     }
 
-    // ------------------------------------------------------------
-    // Extract authenticated UserId from JWT
-    // ------------------------------------------------------------
+    // ============================================================
+    // JWT USER
+    // ============================================================
 
     private Guid? GetUserId()
     {
-        var userIdValue =
+        var value =
             User.FindFirstValue(
                 ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrWhiteSpace(
-            userIdValue))
-        {
-            return null;
-        }
-
-        if (!Guid.TryParse(
-            userIdValue,
-            out var userId))
-        {
-            return null;
-        }
-
-        return userId;
+        return Guid.TryParse(
+            value,
+            out var userId)
+            ? userId
+            : null;
     }
 }

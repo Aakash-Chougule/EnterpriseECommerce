@@ -9,21 +9,51 @@ import {
 } from 'react-router-dom'
 
 import {
+    createRazorpayOrder,
     getPaymentByOrderId,
-    markPaymentSuccessful,
-    markPaymentFailed
+    markPaymentFailed,
+    verifyRazorpayPayment
 } from '../services/paymentService'
 
 import './PaymentPage.css'
 
 // ============================================================
-// PAYMENT PAGE
+// RAZORPAY SCRIPT
 // ============================================================
-//
-// Simulated payment page.
-//
-// Later we can replace this with a real payment gateway
-// such as Razorpay or Stripe.
+
+function loadRazorpayScript() {
+
+    return new Promise(
+        (resolve) => {
+
+            if (window.Razorpay) {
+                resolve(true)
+                return
+            }
+
+            const script =
+                document.createElement(
+                    'script'
+                )
+
+            script.src =
+                'https://checkout.razorpay.com/v1/checkout.js'
+
+            script.onload =
+                () => resolve(true)
+
+            script.onerror =
+                () => resolve(false)
+
+            document.body.appendChild(
+                script
+            )
+        }
+    )
+}
+
+// ============================================================
+// PAYMENT PAGE
 // ============================================================
 
 function PaymentPage() {
@@ -50,130 +80,54 @@ function PaymentPage() {
     // LOAD PAYMENT
     // ========================================================
 
-    const loadPayment = async () => {
+    const loadPayment =
+        async () => {
 
-        try {
+            try {
 
-            setLoading(true)
-            setError('')
+                setLoading(true)
+                setError('')
 
-            const data =
-                await getPaymentByOrderId(
-                    orderId
+                const data =
+                    await getPaymentByOrderId(
+                        orderId
+                    )
+
+                setPayment(
+                    data
                 )
 
-            setPayment(data)
-        }
-        catch (err) {
+                // COD should never reach Razorpay page.
+                if (
+                    data.paymentMethod
+                        ?.toUpperCase() ===
+                    'COD'
+                ) {
+                    navigate(
+                        `/order-success/${orderId}`,
+                        {
+                            replace: true
+                        }
+                    )
+                }
+            }
+            catch (err) {
 
-            console.error(
-                'Failed to load payment:',
-                err
-            )
-
-            setError(
-                err.response?.data?.message ||
-                'Unable to load payment.'
-            )
-        }
-        finally {
-
-            setLoading(false)
-        }
-    }
-
-    // ========================================================
-    // SUCCESS
-    // ========================================================
-
-    const handleSuccess = async () => {
-
-        if (!payment) {
-            return
-        }
-
-        try {
-
-            setProcessing(true)
-            setError('')
-
-            const transactionId =
-                `TEST-${Date.now()}`
-
-            const updatedPayment =
-                await markPaymentSuccessful(
-                    payment.id,
-                    transactionId
+                console.error(
+                    'Failed to load payment:',
+                    err
                 )
 
-            setPayment(updatedPayment)
-
-            navigate(
-                `/order-success/${orderId}`
-            )
-        }
-        catch (err) {
-
-            console.error(
-                'Payment success update failed:',
-                err
-            )
-
-            setError(
-                err.response?.data?.message ||
-                'Unable to complete payment.'
-            )
-        }
-        finally {
-
-            setProcessing(false)
-        }
-    }
-
-    // ========================================================
-    // FAILURE
-    // ========================================================
-
-    const handleFailure = async () => {
-
-        if (!payment) {
-            return
-        }
-
-        try {
-
-            setProcessing(true)
-            setError('')
-
-            const updatedPayment =
-                await markPaymentFailed(
-                    payment.id,
-                    'Simulated payment failure from React.'
+                setError(
+                    err.response?.data?.message ||
+                    'Unable to load payment.'
                 )
+            }
+            finally {
 
-            setPayment(updatedPayment)
+                setLoading(false)
+            }
         }
-        catch (err) {
-
-            console.error(
-                'Payment failure update failed:',
-                err
-            )
-
-            setError(
-                err.response?.data?.message ||
-                'Unable to mark payment as failed.'
-            )
-        }
-        finally {
-
-            setProcessing(false)
-        }
-    }
-
-    // ========================================================
-    // INITIAL LOAD
-    // ========================================================
 
     useEffect(() => {
 
@@ -182,13 +136,232 @@ function PaymentPage() {
     }, [orderId])
 
     // ========================================================
-    // HELPERS
+    // PAY WITH RAZORPAY
+    // ========================================================
+
+    const handlePayNow =
+        async () => {
+
+            if (!payment) {
+                return
+            }
+
+            try {
+
+                setProcessing(true)
+                setError('')
+
+                // --------------------------------------------
+                // Load Razorpay Checkout SDK
+                // --------------------------------------------
+
+                const loaded =
+                    await loadRazorpayScript()
+
+                if (!loaded) {
+
+                    throw new Error(
+                        'Unable to load Razorpay Checkout.'
+                    )
+                }
+
+                // --------------------------------------------
+                // Create gateway order from backend
+                // --------------------------------------------
+
+                const razorpayOrder =
+                    await createRazorpayOrder(
+                        payment.id
+                    )
+
+                // --------------------------------------------
+                // Checkout configuration
+                // --------------------------------------------
+
+                const options = {
+
+                    key:
+                        razorpayOrder.keyId,
+
+                    amount:
+                        razorpayOrder.amount,
+
+                    currency:
+                        razorpayOrder.currency,
+
+                    name:
+                        'Enterprise E-Commerce',
+
+                    description:
+                        `Payment for ${razorpayOrder.orderNumber}`,
+
+                    order_id:
+                        razorpayOrder.razorpayOrderId,
+
+                    // ========================================
+                    // SUCCESS CALLBACK
+                    // ========================================
+
+                    handler:
+                        async function (
+                            response
+                        ) {
+
+                            try {
+
+                                setProcessing(true)
+
+                                await verifyRazorpayPayment(
+                                    payment.id,
+                                    response.razorpay_payment_id,
+                                    response.razorpay_order_id,
+                                    response.razorpay_signature
+                                )
+
+                                navigate(
+                                    `/order-success/${orderId}`
+                                )
+                            }
+                            catch (verifyError) {
+
+                                console.error(
+                                    'Razorpay verification failed:',
+                                    verifyError
+                                )
+
+                                setError(
+                                    verifyError
+                                        .response
+                                        ?.data
+                                        ?.message ||
+                                    'Payment verification failed.'
+                                )
+
+                                setProcessing(false)
+                            }
+                        },
+
+                    prefill: {
+
+                        name:
+                            razorpayOrder.customerName,
+
+                        email:
+                            razorpayOrder.customerEmail,
+
+                        contact:
+                            razorpayOrder.customerPhone ||
+                            ''
+                    },
+
+                    notes: {
+
+                        internalPaymentId:
+                            payment.id,
+
+                        internalOrderId:
+                            orderId
+                    },
+
+                    theme: {
+                        color:
+                            '#2563eb'
+                    },
+
+                    modal: {
+
+                        ondismiss:
+                            function () {
+
+                                setProcessing(
+                                    false
+                                )
+                            }
+                    }
+                }
+
+                const razorpay =
+                    new window.Razorpay(
+                        options
+                    )
+
+                // ============================================
+                // PAYMENT FAILURE EVENT
+                // ============================================
+
+                razorpay.on(
+                    'payment.failed',
+                    async function (
+                        response
+                    ) {
+
+                        console.error(
+                            'Razorpay payment failed:',
+                            response.error
+                        )
+
+                        try {
+
+                            await markPaymentFailed(
+                                payment.id,
+                                response
+                                    .error
+                                    ?.description ||
+                                'Razorpay payment failed.'
+                            )
+                        }
+                        catch (failureUpdateError) {
+
+                            console.error(
+                                'Unable to save payment failure:',
+                                failureUpdateError
+                            )
+                        }
+
+                        setError(
+                            response
+                                .error
+                                ?.description ||
+                            'Payment failed.'
+                        )
+
+                        setProcessing(
+                            false
+                        )
+                    }
+                )
+
+                // ============================================
+                // OPEN CHECKOUT
+                // ============================================
+
+                razorpay.open()
+            }
+            catch (err) {
+
+                console.error(
+                    'Unable to start Razorpay:',
+                    err
+                )
+
+                setError(
+                    err.response?.data?.message ||
+                    err.message ||
+                    'Unable to start payment.'
+                )
+
+                setProcessing(false)
+            }
+        }
+
+    // ========================================================
+    // PRICE
     // ========================================================
 
     const formatPrice =
-        (price) =>
+        value =>
             Number(
-                price ?? 0
+                value ?? 0
             ).toLocaleString(
                 'en-IN',
                 {
@@ -196,50 +369,6 @@ function PaymentPage() {
                     maximumFractionDigits: 2
                 }
             )
-
-    const getPaymentStatusLabel =
-        (status) => {
-
-            switch (status) {
-
-                case 1:
-                    return 'Pending'
-
-                case 2:
-                    return 'Successful'
-
-                case 3:
-                    return 'Failed'
-
-                case 4:
-                    return 'Refunded'
-
-                default:
-                    return String(status)
-            }
-        }
-
-    const getPaymentStatusClass =
-        (status) => {
-
-            switch (status) {
-
-                case 1:
-                    return 'payment-status pending'
-
-                case 2:
-                    return 'payment-status success'
-
-                case 3:
-                    return 'payment-status failed'
-
-                case 4:
-                    return 'payment-status refunded'
-
-                default:
-                    return 'payment-status'
-            }
-        }
 
     // ========================================================
     // LOADING
@@ -261,11 +390,6 @@ function PaymentPage() {
                             Loading payment...
                         </h2>
 
-                        <p>
-                            Please wait while we load
-                            your payment information.
-                        </p>
-
                     </div>
 
                 </div>
@@ -275,7 +399,7 @@ function PaymentPage() {
     }
 
     // ========================================================
-    // MAIN UI
+    // UI
     // ========================================================
 
     return (
@@ -287,16 +411,16 @@ function PaymentPage() {
                 <header className="payment-header">
 
                     <span className="payment-eyebrow">
-                        Complete your order
+                        Secure Payment
                     </span>
 
                     <h1>
-                        Payment
+                        Complete Payment
                     </h1>
 
                     <p>
-                        Review your payment details and
-                        complete the simulated transaction.
+                        Your payment is securely
+                        processed by Razorpay.
                     </p>
 
                 </header>
@@ -316,18 +440,9 @@ function PaymentPage() {
 
                     <section className="payment-empty">
 
-                        <div className="payment-empty-icon">
-                            !
-                        </div>
-
                         <h2>
                             Payment not found
                         </h2>
-
-                        <p>
-                            We could not find payment
-                            information for this order.
-                        </p>
 
                         <button
                             type="button"
@@ -343,10 +458,6 @@ function PaymentPage() {
                 ) : (
 
                     <div className="payment-layout">
-
-                        {/* ======================================
-                            PAYMENT DETAILS
-                           ====================================== */}
 
                         <section className="payment-card">
 
@@ -372,28 +483,6 @@ function PaymentPage() {
 
                             </div>
 
-                            <div className="payment-status-row">
-
-                                <span>
-                                    Payment Status
-                                </span>
-
-                                <span
-                                    className={
-                                        getPaymentStatusClass(
-                                            payment.status
-                                        )
-                                    }
-                                >
-                                    {
-                                        getPaymentStatusLabel(
-                                            payment.status
-                                        )
-                                    }
-                                </span>
-
-                            </div>
-
                             <div className="payment-details">
 
                                 <div className="payment-detail-row">
@@ -403,7 +492,10 @@ function PaymentPage() {
                                     </span>
 
                                     <strong>
-                                        {payment.paymentMethod}
+                                        {
+                                            payment
+                                                .paymentMethod
+                                        }
                                     </strong>
 
                                 </div>
@@ -432,84 +524,40 @@ function PaymentPage() {
 
                                 </div>
 
-                                {payment.transactionId && (
-
-                                    <div className="payment-detail-row">
-
-                                        <span>
-                                            Transaction ID
-                                        </span>
-
-                                        <strong className="payment-code">
-                                            {payment.transactionId}
-                                        </strong>
-
-                                    </div>
-
-                                )}
-
-                                {payment.failureReason && (
-
-                                    <div className="payment-failure-box">
-
-                                        <strong>
-                                            Payment Failure
-                                        </strong>
-
-                                        <p>
-                                            {
-                                                payment.failureReason
-                                            }
-                                        </p>
-
-                                    </div>
-
-                                )}
-
                             </div>
 
                         </section>
 
-                        {/* ======================================
-                            ACTIONS
-                           ====================================== */}
-
                         <aside className="payment-actions-card">
 
                             <span className="payment-actions-label">
-                                Demo Payment
+                                Razorpay
                             </span>
 
                             <h2>
-                                Simulate Payment
+                                Pay Securely
                             </h2>
 
                             <p>
-                                This page currently simulates
-                                payment gateway behavior for
-                                development and testing.
+                                Pay using UPI, card,
+                                net banking or another
+                                payment option supported
+                                by Razorpay.
                             </p>
 
                             <button
                                 type="button"
                                 className="payment-success-button"
                                 disabled={processing}
-                                onClick={handleSuccess}
+                                onClick={handlePayNow}
                             >
                                 {
                                     processing
-                                        ? 'Processing...'
-                                        : 'Simulate Successful Payment'
+                                        ? 'Please wait...'
+                                        : `Pay ₹${formatPrice(
+                                            payment.amount
+                                        )}`
                                 }
-                            </button>
-
-                            <button
-                                type="button"
-                                className="payment-failure-button"
-                                disabled={processing}
-                                onClick={handleFailure}
-                            >
-                                Simulate Failed Payment
                             </button>
 
                             <div className="payment-security-note">
@@ -519,8 +567,9 @@ function PaymentPage() {
                                 </span>
 
                                 <p>
-                                    Real gateway integration will
-                                    replace these simulation controls.
+                                    Payment details are
+                                    handled securely by
+                                    Razorpay.
                                 </p>
 
                             </div>
@@ -537,4 +586,4 @@ function PaymentPage() {
     )
 }
 
-export default PaymentPage 
+export default PaymentPage

@@ -35,15 +35,15 @@
 .admin-dashboard-header h1 {
     margin: 0;
     color: #0f172a;
-    font-size: clamp( 30px, 4vw, 42px );
+    font-size: clamp( 30px, 4vw, 44px );
 }
 
 .admin-dashboard-header p {
-    max-width: 620px;
-    margin: 9px 0 0;
+    max-width: 760px;
+    margin: 10px 0 0;
     color: #64748b;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.7;
 }
 
 /* ============================================================
@@ -54,7 +54,7 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
-    margin-bottom: 34px;
+    margin-bottom: 40px;
 }
 
 .admin-summary-card {
@@ -97,15 +97,11 @@
 }
 
 /* ============================================================
-   MANAGEMENT SECTION
+   SECTION HEADING
    ============================================================ */
 
-.admin-management-section {
-    margin-top: 10px;
-}
-
 .admin-section-heading {
-    margin-bottom: 20px;
+    margin-bottom: 22px;
 }
 
     .admin-section-heading > span {
@@ -117,80 +113,163 @@
     }
 
     .admin-section-heading h2 {
-        margin: 4px 0 5px;
+        margin: 5px 0 7px;
         color: #0f172a;
-        font-size: 24px;
+        font-size: 26px;
     }
 
     .admin-section-heading p {
+        max-width: 760px;
         margin: 0;
         color: #64748b;
         font-size: 13px;
+        line-height: 1.7;
     }
 
 /* ============================================================
-   MANAGEMENT GRID
+   SYSTEM OVERVIEW
    ============================================================ */
 
-.admin-management-grid {
+.admin-system-overview {
+    margin-bottom: 42px;
+}
+
+.admin-overview-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
 }
 
-.admin-management-card {
-    display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 14px;
-    padding: 20px;
+.admin-overview-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: 14px;
     background: #ffffff;
-    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
     transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-    .admin-management-card:hover {
-        transform: translateY(-3px);
+    .admin-overview-card:hover {
+        transform: translateY(-2px);
         border-color: #bfdbfe;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
     }
 
-.admin-management-icon {
+.admin-overview-icon {
     width: 48px;
     height: 48px;
+    flex: 0 0 48px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 11px;
     background: #eff6ff;
-    font-size: 21px;
+    font-size: 22px;
 }
 
-.admin-management-content h3 {
+.admin-overview-card h3 {
+    margin: 0 0 7px;
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.admin-overview-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+/* ============================================================
+   ARCHITECTURE
+   ============================================================ */
+
+.admin-architecture-section {
+    margin-bottom: 38px;
+}
+
+.admin-tech-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.admin-tech-card {
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: #ffffff;
+}
+
+    .admin-tech-card > span {
+        display: block;
+        margin-bottom: 7px;
+        color: #2563eb;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+    }
+
+    .admin-tech-card strong {
+        display: block;
+        margin-bottom: 7px;
+        color: #0f172a;
+        font-size: 15px;
+    }
+
+    .admin-tech-card p {
+        margin: 0;
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.6;
+    }
+
+/* ============================================================
+   ADMIN NOTE
+   ============================================================ */
+
+.admin-dashboard-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    background: #eff6ff;
+}
+
+.admin-dashboard-note-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 19px;
+}
+
+.admin-dashboard-note h3 {
     margin: 0 0 5px;
     color: #0f172a;
     font-size: 15px;
 }
 
-.admin-management-content p {
+.admin-dashboard-note p {
     margin: 0;
-    color: #64748b;
-    font-size: 11px;
-    line-height: 1.5;
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.7;
 }
 
-.admin-card-arrow {
-    color: #94a3b8;
-    font-size: 20px;
-    transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.admin-management-card:hover
-.admin-card-arrow {
-    transform: translateX(3px);
-    color: #2563eb;
+.admin-dashboard-note strong {
+    color: #1d4ed8;
 }
 
 /* ============================================================
@@ -200,6 +279,10 @@
 @media (max-width: 900px) {
 
     .admin-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-tech-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -218,18 +301,20 @@
         font-size: 30px;
     }
 
-    .admin-management-grid {
+    .admin-overview-grid {
         grid-template-columns: 1fr;
     }
 
-    .admin-management-card {
-        grid-template-columns: 44px minmax(0, 1fr) auto;
-        padding: 17px;
+    .admin-tech-grid {
+        grid-template-columns: 1fr;
     }
 
-    .admin-management-icon {
-        width: 44px;
-        height: 44px;
+    .admin-overview-card {
+        padding: 18px;
+    }
+
+    .admin-dashboard-note {
+        padding: 17px;
     }
 }
 
@@ -248,18 +333,14 @@
         grid-template-columns: 1fr;
     }
 
-    .admin-management-card {
-        grid-template-columns: 40px minmax(0, 1fr);
+    .admin-overview-card {
         gap: 12px;
     }
 
-    .admin-card-arrow {
-        display: none;
-    }
-
-    .admin-management-icon {
-        width: 40px;
-        height: 40px;
+    .admin-overview-icon {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
         font-size: 18px;
     }
 }

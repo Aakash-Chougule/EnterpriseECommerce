@@ -1,6 +1,6 @@
 namespace EnterpriseECommerce.Domain.Entities;
 
-public class Role
+public class Permission
 {
     public Guid Id { get; private set; }
 
@@ -9,18 +9,18 @@ public class Role
 
     public string? Description { get; private set; }
 
-    private Role()
+    private Permission()
     {
     }
 
-    public Role(
+    public Permission(
         string name,
         string? description = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException(
-                "Role name is required.");
+                "Permission name is required.");
         }
 
         Id =

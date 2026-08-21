@@ -5,12 +5,17 @@ import {
 } from 'react-router-dom'
 
 import {
+    useEffect,
     useState
 } from 'react'
 
 import {
     useAuth
 } from '../context/AuthContext'
+
+import {
+    getProfile
+} from '../services/profileService'
 
 import './Navbar.css'
 
@@ -29,38 +34,160 @@ function Navbar() {
         logout
     } = useAuth()
 
+    // ========================================================
+    // UI STATE
+    // ========================================================
+
     const [mobileMenuOpen, setMobileMenuOpen] =
         useState(false)
 
     const [adminMenuOpen, setAdminMenuOpen] =
         useState(false)
 
+    const [profile, setProfile] =
+        useState(null)
+
+    // ========================================================
+    // LOAD CURRENT PROFILE
+    // ========================================================
+
+    useEffect(() => {
+
+        let cancelled =
+            false
+
+        const loadProfile =
+            async () => {
+
+                if (!isAuthenticated) {
+
+                    setProfile(null)
+
+                    return
+                }
+
+                try {
+
+                    const data =
+                        await getProfile()
+
+                    if (!cancelled) {
+
+                        setProfile(
+                            data
+                        )
+                    }
+                }
+                catch (error) {
+
+                    console.error(
+                        'Unable to load navbar profile:',
+                        error
+                    )
+                }
+            }
+
+        loadProfile()
+
+        return () => {
+
+            cancelled =
+                true
+        }
+
+    }, [
+        isAuthenticated,
+        user?.userId,
+        user?.id
+    ])
+
+    // ========================================================
+    // CURRENT USER
+    // ========================================================
+
+    const currentUser =
+    {
+        ...(user || {}),
+        ...(profile || {})
+    }
+
+    const isAdmin =
+        currentUser?.role === 'Admin'
+
+    const isMainAdmin =
+        currentUser?.isMainAdmin === true
+
+    const permissions =
+        Array.isArray(
+            currentUser?.permissions
+        )
+            ? currentUser.permissions
+            : []
+
+    // ========================================================
+    // PERMISSION CHECK
+    // ========================================================
+
+    const hasPermission =
+        (permission) => {
+
+            if (!isAdmin) {
+
+                return false
+            }
+
+            if (isMainAdmin) {
+
+                return true
+            }
+
+            return permissions.includes(
+                permission
+            )
+        }
+
     // ========================================================
     // LOGOUT
     // ========================================================
 
-    const handleLogout = () => {
+    const handleLogout =
+        () => {
 
-        logout()
+            logout()
 
-        setMobileMenuOpen(false)
-        setAdminMenuOpen(false)
+            setProfile(null)
 
-        navigate('/login')
-    }
+            setMobileMenuOpen(
+                false
+            )
+
+            setAdminMenuOpen(
+                false
+            )
+
+            navigate(
+                '/login'
+            )
+        }
 
     // ========================================================
-    // CLOSE MOBILE MENU
+    // CLOSE MENU
     // ========================================================
 
-    const closeMenu = () => {
+    const closeMenu =
+        () => {
 
-        setMobileMenuOpen(false)
-        setAdminMenuOpen(false)
-    }
+            setMobileMenuOpen(
+                false
+            )
+
+            setAdminMenuOpen(
+                false
+            )
+        }
 
     // ========================================================
-    // ACTIVE LINK CLASS
+    // NAV LINK CLASS
     // ========================================================
 
     const getNavLinkClass =
@@ -68,6 +195,14 @@ function Navbar() {
             isActive
                 ? 'navbar-link active'
                 : 'navbar-link'
+
+    // ========================================================
+    // ADMIN MENU
+    // ========================================================
+
+    const showAdminMenu =
+        isAuthenticated &&
+        isAdmin
 
     return (
 
@@ -82,18 +217,25 @@ function Navbar() {
                 <Link
                     to="/"
                     className="navbar-brand"
-                    onClick={closeMenu}
+                    onClick={
+                        closeMenu
+                    }
                 >
+
                     <span className="brand-icon">
                         E
                     </span>
 
                     <span className="brand-text">
+
                         Enterprise
+
                         <strong>
                             Commerce
                         </strong>
+
                     </span>
+
                 </Link>
 
                 {/* ==================================================
@@ -106,10 +248,14 @@ function Navbar() {
                     onClick={
                         () =>
                             setMobileMenuOpen(
-                                current => !current
+                                current =>
+                                    !current
                             )
                     }
                     aria-label="Toggle navigation"
+                    aria-expanded={
+                        mobileMenuOpen
+                    }
                 >
                     ☰
                 </button>
@@ -128,14 +274,24 @@ function Navbar() {
 
                     <nav className="navbar-links">
 
+                        {/* HOME */}
+
                         <NavLink
                             to="/"
                             end
-                            className={getNavLinkClass}
-                            onClick={closeMenu}
+                            className={
+                                getNavLinkClass
+                            }
+                            onClick={
+                                closeMenu
+                            }
                         >
                             Home
                         </NavLink>
+
+                        {/* ==================================================
+                            AUTHENTICATED LINKS
+                           ================================================== */}
 
                         {isAuthenticated && (
 
@@ -143,33 +299,57 @@ function Navbar() {
 
                                 <NavLink
                                     to="/products"
-                                    className={getNavLinkClass}
-                                    onClick={closeMenu}
+                                    className={
+                                        getNavLinkClass
+                                    }
+                                    onClick={
+                                        closeMenu
+                                    }
                                 >
                                     Products
                                 </NavLink>
 
                                 <NavLink
                                     to="/cart"
-                                    className={getNavLinkClass}
-                                    onClick={closeMenu}
+                                    className={
+                                        getNavLinkClass
+                                    }
+                                    onClick={
+                                        closeMenu
+                                    }
                                 >
                                     Cart
                                 </NavLink>
 
                                 <NavLink
                                     to="/orders"
-                                    className={getNavLinkClass}
-                                    onClick={closeMenu}
+                                    className={
+                                        getNavLinkClass
+                                    }
+                                    onClick={
+                                        closeMenu
+                                    }
                                 >
                                     My Orders
                                 </NavLink>
 
-                                {/* ==================================
-                                    ADMIN DROPDOWN
-                                   ================================== */}
+                                <NavLink
+                                    to="/profile"
+                                    className={
+                                        getNavLinkClass
+                                    }
+                                    onClick={
+                                        closeMenu
+                                    }
+                                >
+                                    My Profile
+                                </NavLink>
 
-                                {user?.role === 'Admin' && (
+                                {/* ==================================================
+                                    ADMIN
+                                   ================================================== */}
+
+                                {showAdminMenu && (
 
                                     <div className="admin-dropdown">
 
@@ -183,8 +363,16 @@ function Navbar() {
                                                             !current
                                                     )
                                             }
+                                            aria-expanded={
+                                                adminMenuOpen
+                                            }
                                         >
-                                            Admin
+
+                                            {
+                                                isMainAdmin
+                                                    ? 'Main Admin'
+                                                    : 'Admin'
+                                            }
 
                                             <span
                                                 className={
@@ -195,60 +383,169 @@ function Navbar() {
                                             >
                                                 ▾
                                             </span>
+
                                         </button>
 
                                         {adminMenuOpen && (
 
                                             <div className="admin-dropdown-menu">
 
+                                                {/* DASHBOARD */}
+
                                                 <NavLink
                                                     to="/admin"
                                                     end
                                                     className="dropdown-link"
-                                                    onClick={closeMenu}
+                                                    onClick={
+                                                        closeMenu
+                                                    }
                                                 >
                                                     Dashboard
                                                 </NavLink>
 
-                                                <NavLink
-                                                    to="/admin/products"
-                                                    className="dropdown-link"
-                                                    onClick={closeMenu}
-                                                >
-                                                    Manage Products
-                                                </NavLink>
+                                                {/* PRODUCTS */}
 
-                                                <NavLink
-                                                    to="/admin/categories"
-                                                    className="dropdown-link"
-                                                    onClick={closeMenu}
-                                                >
-                                                    Manage Categories
-                                                </NavLink>
+                                                {
+                                                    hasPermission(
+                                                        'ManageProducts'
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/products"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Manage Products
+                                                        </NavLink>
+                                                    )
+                                                }
 
-                                                <NavLink
-                                                    to="/admin/orders"
-                                                    className="dropdown-link"
-                                                    onClick={closeMenu}
-                                                >
-                                                    Manage Orders
-                                                </NavLink>
+                                                {/* CATEGORIES */}
 
-                                                <NavLink
-                                                    to="/admin/inventory"
-                                                    className="dropdown-link"
-                                                    onClick={closeMenu}
-                                                >
-                                                    Inventory
-                                                </NavLink>
+                                                {
+                                                    hasPermission(
+                                                        'ManageCategories'
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/categories"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Manage Categories
+                                                        </NavLink>
+                                                    )
+                                                }
 
-                                                <NavLink
-                                                    to="/admin/data"
-                                                    className="dropdown-link"
-                                                    onClick={closeMenu}
-                                                >
-                                                    Admin Data
-                                                </NavLink>
+                                                {/* ORDERS */}
+
+                                                {
+                                                    hasPermission(
+                                                        'ManageOrders'
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/orders"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Manage Orders
+                                                        </NavLink>
+                                                    )
+                                                }
+
+                                                {/* INVENTORY */}
+
+                                                {
+                                                    hasPermission(
+                                                        'ManageInventory'
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/inventory"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Inventory
+                                                        </NavLink>
+                                                    )
+                                                }
+
+                                                {/* DATA / REPORTS */}
+
+                                                {
+                                                    (
+                                                        isMainAdmin ||
+                                                        hasPermission(
+                                                            'ViewReports'
+                                                        )
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/data"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Admin Data
+                                                        </NavLink>
+                                                    )
+                                                }
+
+                                                {/* ==================================================
+                                                    USERS & ADMINS
+                                                   ================================================== */}
+
+                                                {
+                                                    (
+                                                        isMainAdmin ||
+                                                        hasPermission(
+                                                            'ManageUsers'
+                                                        ) ||
+                                                        hasPermission(
+                                                            'ManageAdmins'
+                                                        )
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/users"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Users & Admins
+                                                        </NavLink>
+                                                    )
+                                                }
+
+                                                {/* ==================================================
+                                                    FULL SYSTEM ACCESS
+                                                    MAIN ADMIN ONLY
+                                                   ================================================== */}
+
+                                                {isMainAdmin && (
+
+                                                    <NavLink
+                                                        to="/admin/access"
+                                                        className="dropdown-link"
+                                                        onClick={
+                                                            closeMenu
+                                                        }
+                                                    >
+                                                        Full System Access
+                                                    </NavLink>
+
+                                                )}
 
                                             </div>
 
@@ -274,15 +571,24 @@ function Navbar() {
 
                             <>
 
-                                <div className="user-information">
+                                <NavLink
+                                    to="/profile"
+                                    className="user-information"
+                                    onClick={
+                                        closeMenu
+                                    }
+                                    title="Open My Profile"
+                                >
 
                                     <div className="user-avatar">
 
                                         {
-                                            user?.firstName
+                                            currentUser
+                                                ?.firstName
                                                 ?.charAt(0)
                                                 ?.toUpperCase()
-                                            || 'U'
+                                            ||
+                                            'U'
                                         }
 
                                     </div>
@@ -290,27 +596,41 @@ function Navbar() {
                                     <div className="user-details">
 
                                         <span className="user-name">
+
                                             {
-                                                user?.firstName ||
+                                                currentUser
+                                                    ?.firstName
+                                                ||
                                                 'User'
                                             }
+
                                         </span>
 
                                         <span className="user-role">
+
                                             {
-                                                user?.role ||
-                                                'Customer'
+                                                isMainAdmin
+                                                    ? 'Main Admin'
+                                                    : (
+                                                        currentUser
+                                                            ?.role
+                                                        ||
+                                                        'Customer'
+                                                    )
                                             }
+
                                         </span>
 
                                     </div>
 
-                                </div>
+                                </NavLink>
 
                                 <button
                                     type="button"
                                     className="logout-button"
-                                    onClick={handleLogout}
+                                    onClick={
+                                        handleLogout
+                                    }
                                 >
                                     Logout
                                 </button>
@@ -324,7 +644,9 @@ function Navbar() {
                                 <NavLink
                                     to="/login"
                                     className="login-link"
-                                    onClick={closeMenu}
+                                    onClick={
+                                        closeMenu
+                                    }
                                 >
                                     Login
                                 </NavLink>
@@ -332,7 +654,9 @@ function Navbar() {
                                 <NavLink
                                     to="/register"
                                     className="register-link"
-                                    onClick={closeMenu}
+                                    onClick={
+                                        closeMenu
+                                    }
                                 >
                                     Create Account
                                 </NavLink>
