@@ -1490,6 +1490,9 @@ dotnet run --project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
 ```powershell
 dotnet run --project src\EnterpriseECommerce.NotificationService\EnterpriseECommerce.NotificationService.csproj
 ```
+```powershell
+docker compose up -d postgres zookeeper kafka
+```
 
 ```powershell
 cd client
