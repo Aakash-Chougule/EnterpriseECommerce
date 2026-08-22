@@ -1,51 +1,55 @@
 # 🛒 Enterprise E-Commerce & Order Management System
 
-A full-stack **enterprise-style e-commerce and order management platform** built using **ASP.NET Core (.NET 10), React.js, PostgreSQL, Entity Framework Core, JWT Authentication, Razorpay, Docker, Kafka, Azure, and AWS concepts**.
+A full-stack enterprise-style e-commerce application built with:
 
-The project is designed as a real-world e-commerce application inspired by platforms such as Flipkart and other modern online marketplaces.
+- ASP.NET Core (.NET 10)
+- React.js
+- PostgreSQL
+- Entity Framework Core
+- JWT Authentication
+- Razorpay
+- Apache Kafka
+- Docker
+- Azure / AWS concepts
+- Unit & Integration Testing
 
-It demonstrates backend architecture, authentication and authorization, product and inventory management, shopping cart functionality, order processing, payments, GST calculations, reporting, and a React-based frontend.
+The project is inspired by modern marketplace applications such as Flipkart and is intended as a practical enterprise .NET learning and portfolio project.
 
-> 🚧 **Project Status:** Active learning project — current development phase completed and temporarily paused. Additional enterprise features are planned for future versions.
+> 🚧 Current Status: Development is temporarily paused. The repository preserves the working state so development can continue later.
 
 ---
 
-# 📌 Project Overview
+# 📌 Main Features
 
-The goal of this project is to build a production-style e-commerce system rather than a basic CRUD application.
-
-The application currently includes:
+Current functionality includes:
 
 - User registration and login
 - JWT authentication
 - Role-based authorization
-- Customer and admin functionality
-- Category management
+- Admin permissions
+- Customer profile
 - Product management
+- Category management
 - Inventory management
-- Low-stock monitoring
 - Shopping cart
 - Checkout
-- Order management
-- Razorpay payment integration
-- GST-aware product pricing
+- GST-aware pricing
 - HSN codes
-- CGST / SGST / IGST calculations
-- Shipping information
-- Delivery charges
-- Inventory reports
-- Product/category-wise reporting
-- Admin dashboard
-- Customer profile
+- CGST / SGST / IGST
+- Shipping charges
+- Order management
+- Razorpay payments
+- Payment verification
 - Order history
-
-The architecture separates the **Domain, Application, Infrastructure, API, Frontend, Notification Service, and Tests**.
+- Admin reports
+- Inventory reports
+- Kafka notification architecture
+- Unit tests
+- Integration tests
 
 ---
 
-# 🏗️ Architecture
-
-The backend follows a layered / Clean Architecture inspired structure.
+# 🏗️ Project Architecture
 
 ```text
 EnterpriseECommerce
@@ -54,24 +58,10 @@ EnterpriseECommerce
 │   └── React Frontend
 │
 ├── src
-│   │
 │   ├── EnterpriseECommerce.Domain
-│   │   ├── Entities
-│   │   └── Enums
-│   │
 │   ├── EnterpriseECommerce.Application
-│   │   ├── DTOs
-│   │   ├── Interfaces
-│   │   └── Services
-│   │
 │   ├── EnterpriseECommerce.Infrastructure
-│   │   ├── Persistence
-│   │   ├── Configurations
-│   │   └── Repositories
-│   │
 │   ├── EnterpriseECommerce.API
-│   │   └── Controllers
-│   │
 │   └── EnterpriseECommerce.NotificationService
 │
 ├── tests
@@ -83,204 +73,82 @@ EnterpriseECommerce
 
 ---
 
-# ⚙️ Technology Stack
+# 🧰 Technology Stack
 
 ## Backend
 
-- C#
-- ASP.NET Core
-- .NET 10
-- ASP.NET Core Web API
-- Entity Framework Core
-- LINQ
-- Dependency Injection
-- Repository Pattern
-- Service Layer
-- Clean Architecture principles
+```text
+C#
+ASP.NET Core
+.NET 10
+ASP.NET Core Web API
+Entity Framework Core
+LINQ
+Dependency Injection
+Repository Pattern
+Service Layer
+Clean Architecture concepts
+```
 
 ## Frontend
 
-- React.js
-- JavaScript
-- HTML5
-- CSS3
-- Axios
-- React Router
+```text
+React.js
+JavaScript
+HTML
+CSS
+Axios
+React Router
+Vite
+```
 
 ## Database
 
-- PostgreSQL
-- Entity Framework Core Migrations
+```text
+PostgreSQL
+Entity Framework Core Migrations
+```
 
-## Authentication & Security
+## Authentication
 
-- JWT Authentication
-- Role-Based Authorization
-- BCrypt Password Hashing
-- Protected API endpoints
+```text
+JWT Bearer Authentication
+Role-Based Authorization
+BCrypt Password Hashing
+Permission-Based Admin Access
+```
 
 ## Payments
 
-- Razorpay integration
-- Razorpay Order creation
-- Payment verification
-- Payment status management
+```text
+Razorpay
+Payment verification
+Payment status tracking
+```
 
-## Messaging / Microservices
+## Messaging
 
-- Apache Kafka
-- Notification Service architecture
+```text
+Apache Kafka
+Notification Service
+```
 
 ## DevOps / Cloud
 
-The project is being designed with support for:
-
-- Docker
-- CI/CD pipelines
-- Microsoft Azure
-- AWS
-- AWS ECS
-
-## Testing
-
-- Unit Tests
-- Integration Tests
-
-## API Testing / Documentation
-
-- Swagger / OpenAPI
-- Postman
-
----
-
-# 👥 User Roles
-
-The system supports role-based access.
-
-## Customer
-
-Customers can:
-
-- Register
-- Login
-- Browse products
-- View product information
-- Add products to cart
-- Update cart quantities
-- Remove cart items
-- Checkout
-- Enter delivery information
-- Select payment method
-- Place orders
-- Make payments
-- View order history
-- View profile information
-
-## Admin
-
-Administrators can:
-
-- Manage categories
-- Manage products
-- Create products
-- Update products
-- Activate/deactivate products
-- Manage inventory
-- Increase/decrease stock
-- Monitor low-stock products
-- View customer orders
-- Manage order status
-- Access reports
-- Access administrative dashboards
-
----
-
-# 🔐 Authentication & Authorization
-
-Authentication is implemented using **JWT Bearer Authentication**.
-
-After successful login, the API generates a JWT token containing user information and role claims.
-
-Protected endpoints require:
-
-```http
-Authorization: Bearer <JWT_TOKEN>
-```
-
-Role-based authorization is used to protect administrative functionality.
-
-Example:
-
-```csharp
-[Authorize(Roles = "Admin")]
-```
-
-Passwords are securely hashed instead of being stored as plain text.
-
----
-
-# 📦 Product Management
-
-Products contain information such as:
-
 ```text
-Product ID
-Category ID
-Product Name
-Description
-SKU
-HSN Code
-GST Rate
-Selling Price
-Stock Quantity
-Active Status
-Created Date
-Updated Date
+Docker
+Docker Compose
+CI/CD roadmap
+Azure
+AWS
+AWS ECS roadmap
 ```
-
-The SKU uniquely identifies a product from a business perspective.
 
 ---
 
-# 🏷️ Category Management
+# 🇮🇳 GST & Pricing
 
-Products are organized into categories.
-
-Administrators can:
-
-- Create categories
-- Update categories
-- Activate categories
-- Deactivate categories
-- Associate products with categories
-
-This allows products and reports to be organized category-wise.
-
----
-
-# 🇮🇳 GST Support
-
-The project contains GST-aware pricing functionality suitable for an Indian e-commerce workflow.
-
-Each product can contain:
-
-```text
-HSN Code
-GST Rate
-GST-inclusive Selling Price
-```
-
-Supported GST rates can include:
-
-```text
-0%
-5%
-12%
-18%
-28%
-```
-
-The application treats the product selling price as **GST inclusive**.
+Product prices are treated as GST-inclusive.
 
 Example:
 
@@ -291,727 +159,1282 @@ GST Rate      = 18%
 Taxable Value = ₹1,000
 GST Amount    = ₹180
 
-Final Product Price = ₹1,180
+Customer Price = ₹1,180
 ```
 
-GST is therefore not incorrectly added again to an already GST-inclusive product price.
+GST is extracted from the product price and is not added twice.
 
----
-
-# 🧾 HSN Code
-
-Products support **HSN (Harmonized System of Nomenclature) codes**.
-
-HSN information can be stored with each product and preserved with order information for future invoice and tax reporting functionality.
-
-Example:
+For intra-state transactions:
 
 ```text
-Product: Mechanical Keyboard
-HSN Code: 8471
-GST Rate: 18%
+CGST + SGST
 ```
 
-The actual HSN/GST classification should be configured according to the applicable tax rules for the product.
-
----
-
-# 💰 GST Calculation
-
-When an order is created, tax information is preserved as part of the order-item snapshot.
-
-For GST-inclusive pricing:
-
-```text
-Taxable Amount =
-Gross Amount × 100 / (100 + GST Rate)
-
-GST Amount =
-Gross Amount - Taxable Amount
-```
-
-Example:
-
-```text
-Gross Price = ₹1,180
-GST = 18%
-
-Taxable Amount = ₹1,000
-GST Amount = ₹180
-```
-
----
-
-# 🏠 Intra-State GST
-
-For orders where the applicable supply and destination states are the same, GST can be divided into:
-
-```text
-CGST
-+
-SGST
-```
-
-Example:
-
-```text
-Total GST = ₹180
-
-CGST = ₹90
-SGST = ₹90
-```
-
----
-
-# 🚚 Inter-State GST
-
-For applicable inter-state transactions, GST can be represented as:
+For inter-state transactions:
 
 ```text
 IGST
 ```
 
-Example:
+Products also support:
 
 ```text
-Taxable Amount = ₹1,000
-IGST = ₹180
-Final Product Price = ₹1,180
+HSN Code
+GST Rate
+GST-inclusive Selling Price
 ```
 
 ---
 
-# 🚚 Shipping & Delivery
+# 🚚 Shipping
 
-Checkout collects structured delivery information.
-
-The order can contain:
+Checkout supports structured delivery information:
 
 ```text
-Shipping Address
+Address
 City
 State
-State Code
-PIN / Postal Code
+GST State Code
+PIN Code
 ```
 
-Shipping information is also used by the pricing/tax workflow.
-
-The architecture supports delivery charge calculation so that the customer can see the final payable amount before payment.
-
----
-
-# 🛒 Shopping Cart
-
-Each authenticated customer has a shopping cart.
-
-Supported functionality includes:
-
-- Add product
-- Remove product
-- Increase quantity
-- Decrease quantity
-- Clear cart
-- Calculate cart total
-- Validate product availability
-
-The cart uses the current product price.
-
-The final purchase information is copied into the order during checkout so historical orders are not affected if the product is modified later.
-
----
-
-# 📋 Order Management
-
-Orders contain customer, product, pricing, tax, payment, and shipping information.
-
-The order lifecycle includes states such as:
-
-```text
-Pending
-   ↓
-Confirmed
-   ↓
-Processing
-   ↓
-Shipped
-   ↓
-Delivered
-```
-
-Orders may also be:
-
-```text
-Cancelled
-```
-
-Business rules prevent invalid transitions.
-
-For example, a shipped or delivered order should not simply be cancelled using the normal cancellation flow.
-
----
-
-# 📸 Order Item Snapshot
-
-An important design decision in this project is storing product information inside `OrderItem` when the order is created.
-
-The snapshot can preserve:
-
-```text
-Product ID
-Product Name
-SKU
-HSN Code
-Quantity
-Unit Price
-GST Rate
-Taxable Amount
-GST Amount
-CGST
-SGST
-IGST
-Final Line Total
-```
-
-This means historical order data remains accurate even if the administrator later changes:
-
-- Product name
-- Product price
-- GST rate
-- HSN code
-
----
-
-# 💳 Payment System
-
-The project contains payment functionality with Razorpay integration.
-
-Payment information can include:
-
-```text
-Payment ID
-Order ID
-Amount
-Payment Method
-Transaction ID
-Payment Status
-Razorpay Order ID
-Razorpay Payment ID
-Razorpay Signature
-Failure Reason
-Created Date
-Updated Date
-```
-
-Supported payment lifecycle includes:
-
-```text
-Pending
-Success
-Failed
-Refunded
-```
-
----
-
-# 💳 Razorpay Integration
-
-The payment workflow is designed around:
-
-```text
-Checkout
-   ↓
-Create Application Order
-   ↓
-Create Payment
-   ↓
-Create Razorpay Order
-   ↓
-Open Razorpay Checkout
-   ↓
-Customer Payment
-   ↓
-Verify Razorpay Signature
-   ↓
-Update Payment Status
-   ↓
-Update Order Status
-```
-
-Sensitive Razorpay credentials should remain on the backend.
-
-Never expose the Razorpay secret key in frontend code.
-
----
-
-# 📊 Inventory Management
-
-The application contains a dedicated inventory management section.
-
-Administrators can monitor:
-
-- Active products
-- In-stock products
-- Low-stock products
-- Out-of-stock products
-- Total inventory units
-
-Administrators can also adjust stock quantities.
-
----
-
-# ⚠️ Low Stock Monitoring
-
-A configurable low-stock threshold can be used to identify products requiring restocking.
+Shipping charges can be configured through backend configuration.
 
 Example:
 
-```text
-Threshold = 5
-
-Stock = 20 → In Stock
-Stock = 5  → Low Stock
-Stock = 0  → Out of Stock
+```json
+"Commerce": {
+  "SellerState": "Maharashtra",
+  "SellerStateCode": "27",
+  "DefaultShippingCharge": 40,
+  "FreeShippingThreshold": 500
+}
 ```
 
----
-
-# 📈 Inventory Reports
-
-The project includes inventory reporting functionality.
-
-Reports can contain product-level information such as:
+Example logic:
 
 ```text
-Product
-Category
-SKU
-Current Stock
-Stock Status
-Price
-Inventory Value
-```
+Order >= ₹500
+→ FREE SHIPPING
 
-Reports can also be organized category-wise for better inventory analysis.
+Order < ₹500
+→ ₹40 Shipping
+```
 
 ---
 
-# 📊 Admin Dashboard
-
-Administrative functionality provides a centralized place for managing the e-commerce platform.
-
-Current/target dashboard information includes:
+# 💳 Payment Flow
 
 ```text
-Products
-Categories
-Inventory
-Orders
-Customers
-Payments
-Low Stock
-Reports
+Cart
+  ↓
+Checkout
+  ↓
+Server calculates final price
+  ↓
+Create Order
+  ↓
+Create Payment
+  ↓
+Create Razorpay Order
+  ↓
+Open Razorpay Checkout
+  ↓
+Customer Payment
+  ↓
+Verify Razorpay Signature
+  ↓
+Payment Success
+  ↓
+Order Updated
+```
+
+Never expose Razorpay secret keys in frontend code.
+
+---
+
+# 🚀 HOW TO RUN THIS PROJECT ON A NEW LAPTOP
+
+This section is intentionally detailed so the project can be restarted later even after a long break.
+
+---
+
+# 1. Install Required Software
+
+Install the following before cloning the project.
+
+## Git
+
+Download and install Git.
+
+Check:
+
+```powershell
+git --version
 ```
 
 ---
 
-# 🌐 API Endpoints
+## .NET 10 SDK
 
-Some of the API areas implemented in the project include:
+Install the .NET 10 SDK.
+
+Check:
+
+```powershell
+dotnet --version
+```
+
+Expected version should start with:
 
 ```text
-/api/Auth
-/api/Products
-/api/Categories
-/api/Cart
-/api/Orders
-/api/Payments
+10.
 ```
-
-Administrative endpoints are protected using role-based authorization.
-
-Swagger can be used to inspect and test available API endpoints.
 
 ---
 
-# 🗄️ Database
+## Node.js
 
-The application uses **PostgreSQL** with **Entity Framework Core**.
+Install the latest supported LTS version of Node.js.
 
-Major entities include:
+Check:
+
+```powershell
+node --version
+npm --version
+```
+
+---
+
+## PostgreSQL
+
+Install PostgreSQL.
+
+You may also install:
 
 ```text
-Users
-Roles
-Categories
-Products
-Carts
-CartItems
-Orders
-OrderItems
-Payments
+pgAdmin
 ```
 
-Entity Framework Core configurations define relationships, indexes, constraints and decimal precision.
+for managing the database visually.
+
+Check PostgreSQL service is running before starting the API.
 
 ---
 
-# 🔄 Entity Framework Core Migrations
+## Docker Desktop
 
-After configuring the PostgreSQL connection string, migrations can be applied using:
+Recommended for:
 
-```bash
-dotnet ef database update \
-  --project src/EnterpriseECommerce.Infrastructure \
-  --startup-project src/EnterpriseECommerce.API
+```text
+Kafka
+PostgreSQL
+future full-stack container setup
 ```
 
-To create a new migration:
+Check:
 
-```bash
-dotnet ef migrations add MigrationName \
-  --project src/EnterpriseECommerce.Infrastructure \
-  --startup-project src/EnterpriseECommerce.API
+```powershell
+docker --version
+docker compose version
 ```
+
+Make sure Docker Desktop is running.
 
 ---
 
-# 🚀 Running the Backend
+# 2. Clone the Repository
 
-Clone the repository:
+Open PowerShell or Command Prompt.
 
-```bash
-git clone <YOUR_REPOSITORY_URL>
+```powershell
+git clone YOUR_GITHUB_REPOSITORY_URL
+```
 
+Example:
+
+```powershell
+git clone https://github.com/YOUR_USERNAME/EnterpriseECommerce.git
+```
+
+Enter the project:
+
+```powershell
 cd EnterpriseECommerce
 ```
 
-Restore packages:
+---
 
-```bash
+# 3. Restore .NET Packages
+
+Run:
+
+```powershell
 dotnet restore
 ```
 
-Build the solution:
+Then:
 
-```bash
+```powershell
 dotnet build EnterpriseECommerce.slnx
 ```
 
-Configure your PostgreSQL connection string and required secrets using development configuration or environment variables.
+Expected result:
 
-Then apply migrations:
-
-```bash
-dotnet ef database update \
-  --project src/EnterpriseECommerce.Infrastructure \
-  --startup-project src/EnterpriseECommerce.API
+```text
+Build succeeded.
 ```
-
-Run the API:
-
-```bash
-dotnet run \
-  --project src/EnterpriseECommerce.API
-```
-
-Open Swagger using the local URL displayed by ASP.NET Core.
 
 ---
 
-# ⚛️ Running the React Frontend
+# 4. Install EF Core CLI Tool
 
-Open another terminal:
+If Entity Framework CLI is not installed:
 
-```bash
+```powershell
+dotnet tool install --global dotnet-ef
+```
+
+Check:
+
+```powershell
+dotnet ef --version
+```
+
+If already installed but outdated:
+
+```powershell
+dotnet tool update --global dotnet-ef
+```
+
+---
+
+# 5. Configure PostgreSQL
+
+Create a PostgreSQL database.
+
+Example:
+
+```text
+Database Name:
+EnterpriseECommerce
+```
+
+Example connection string:
+
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Host=localhost;Port=5432;Database=EnterpriseECommerce;Username=postgres;Password=YOUR_PASSWORD"
+}
+```
+
+Do not commit real passwords to GitHub.
+
+---
+
+# 6. Configure Application Secrets
+
+The GitHub repository should NOT contain production secrets.
+
+You will need to configure values such as:
+
+```text
+PostgreSQL password
+JWT Secret
+Razorpay Key ID
+Razorpay Key Secret
+Kafka settings
+Email credentials
+Azure credentials
+AWS credentials
+```
+
+Recommended methods:
+
+```text
+appsettings.Development.json
+Environment Variables
+dotnet user-secrets
+Azure Key Vault
+AWS Secrets Manager
+```
+
+---
+
+# 7. Example Backend Configuration
+
+A development configuration may look similar to:
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=EnterpriseECommerce;Username=postgres;Password=YOUR_PASSWORD"
+  },
+
+  "Jwt": {
+    "SecretKey": "YOUR_LONG_JWT_SECRET",
+    "Issuer": "EnterpriseECommerce",
+    "Audience": "EnterpriseECommerceClient",
+    "ExpirationMinutes": 60
+  },
+
+  "Razorpay": {
+    "KeyId": "YOUR_RAZORPAY_KEY_ID",
+    "KeySecret": "YOUR_RAZORPAY_KEY_SECRET"
+  },
+
+  "Kafka": {
+    "BootstrapServers": "localhost:9092",
+    "OrderEventsTopic": "order-events",
+    "PaymentEventsTopic": "payment-events",
+    "OrderStatusEventsTopic": "order-status-events"
+  },
+
+  "Commerce": {
+    "SellerState": "Maharashtra",
+    "SellerStateCode": "27",
+    "DefaultShippingCharge": 40,
+    "FreeShippingThreshold": 500
+  }
+}
+```
+
+Important:
+
+```text
+DO NOT push real secrets to GitHub.
+```
+
+---
+
+# 8. Apply Database Migrations
+
+After PostgreSQL is running and the connection string is configured:
+
+```powershell
+dotnet ef database update `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+This creates the database tables using existing migrations.
+
+---
+
+# 9. If You Need to Create a New Migration
+
+Only run this when domain/database models have changed:
+
+```powershell
+dotnet ef migrations add MigrationName `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+Then:
+
+```powershell
+dotnet ef database update `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+---
+
+# 10. Run the ASP.NET API
+
+From the project root:
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+ASP.NET will show something similar to:
+
+```text
+Now listening on:
+http://localhost:xxxx
+https://localhost:xxxx
+```
+
+Swagger can usually be opened at:
+
+```text
+https://localhost:xxxx/swagger
+```
+
+Use the actual port shown in your terminal.
+
+---
+
+# 11. Run the React Frontend
+
+Open a SECOND terminal.
+
+Navigate to the frontend:
+
+```powershell
+cd EnterpriseECommerce
 cd client
 ```
 
-Install dependencies:
+Install packages:
 
-```bash
+```powershell
 npm install
 ```
 
-Run the development server:
+Run:
 
-```bash
+```powershell
 npm run dev
 ```
 
-The Vite development server will display the frontend URL, typically similar to:
+Vite will usually show:
 
 ```text
 http://localhost:5173
 ```
 
+Open that URL in your browser.
+
 ---
 
-# 🔑 Environment Configuration
+# 12. Verify Frontend API URL
 
-Do **NOT** commit production secrets to GitHub.
+Check your frontend API configuration.
 
-Sensitive values may include:
+Example location:
 
 ```text
-Database connection strings
-JWT signing keys
-Razorpay Key Secret
-Kafka credentials
-Azure credentials
-AWS credentials
-Email credentials
+client/src/api/apiClient.js
 ```
 
-Use environment variables, secret managers, or development-specific configuration.
+Make sure the base URL points to the ASP.NET API.
 
-Example conceptual configuration:
+Example:
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "YOUR_DATABASE_CONNECTION"
-  },
-  "Jwt": {
-    "Key": "YOUR_SECRET_KEY"
-  },
-  "Razorpay": {
-    "KeyId": "YOUR_RAZORPAY_KEY_ID",
-    "KeySecret": "YOUR_RAZORPAY_SECRET"
-  }
-}
+```javascript
+const apiClient = axios.create({
+    baseURL: 'https://localhost:xxxx/api'
+})
 ```
 
-Never commit real credentials.
+Use the actual backend port shown when running the API.
 
 ---
 
-# 🔒 Security Considerations
+# 13. Start Kafka
 
-The project uses or is designed around:
+The Notification Service requires Kafka.
 
-- Password hashing
-- JWT authentication
-- Role authorization
-- Server-side price calculation
-- Server-side GST calculation
-- Payment signature verification
-- Protected administrative APIs
-- DTOs instead of exposing entities directly
-- Database constraints
-- Input validation
+If Kafka is running through Docker, start the required containers.
 
-An important principle is:
+Example:
 
-> **Never trust financial values sent by the frontend.**
+```powershell
+docker compose up -d
+```
 
-Product price, GST, shipping charges, discounts and final payment totals should be validated or calculated by the backend.
+Then verify:
+
+```powershell
+docker ps
+```
+
+You should see Kafka-related containers running.
 
 ---
 
-# 🧪 Testing
+# 14. Run Notification Service
 
-The solution contains:
+Open another terminal:
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.NotificationService\EnterpriseECommerce.NotificationService.csproj
+```
+
+Expected log:
 
 ```text
-EnterpriseECommerce.UnitTests
-EnterpriseECommerce.IntegrationTests
+NotificationService subscribed to Kafka topics:
+order-events
+payment-events
+order-status-events
 ```
 
-Run tests using:
+If you see:
 
-```bash
+```text
+1/1 brokers are down
+```
+
+Kafka is not running or the bootstrap server configuration is incorrect.
+
+---
+
+# 15. Run Tests
+
+Run all tests:
+
+```powershell
 dotnet test
 ```
 
-Build the complete solution using:
+Or build everything:
 
-```bash
+```powershell
 dotnet build EnterpriseECommerce.slnx
 ```
 
 ---
 
-# 🐳 Docker
+# ✅ NORMAL DEVELOPMENT STARTUP ORDER
 
-Docker support is part of the project's architecture/roadmap.
-
-The goal is to containerize components such as:
+When returning to the project later, use this sequence.
 
 ```text
-ASP.NET Core API
-React frontend
+1. Start Docker Desktop
+2. Start PostgreSQL
+3. Start Kafka
+4. Start ASP.NET API
+5. Start NotificationService
+6. Start React frontend
+```
+
+Commands:
+
+### Terminal 1
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+### Terminal 2
+
+```powershell
+cd client
+npm run dev
+```
+
+### Terminal 3
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.NotificationService\EnterpriseECommerce.NotificationService.csproj
+```
+
+---
+
+# 🐳 DOCKER
+
+Docker is planned to make setup easier.
+
+Instead of manually installing and starting:
+
+```text
 PostgreSQL
 Kafka
+Kafka dependencies
+```
+
+Docker can manage these services.
+
+---
+
+# Docker Development Goal
+
+The future architecture should look like:
+
+```text
+Docker Compose
+│
+├── PostgreSQL
+├── Kafka
+├── API
+├── NotificationService
+└── React Frontend
+```
+
+Eventually the entire project should start using:
+
+```powershell
+docker compose up -d
+```
+
+---
+
+# Example Future docker-compose.yml
+
+This is an example structure and may need changes based on the final project configuration.
+
+```yaml
+services:
+
+  postgres:
+    image: postgres:latest
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_DB: EnterpriseECommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ecommerce_postgres_data:/var/lib/postgresql/data
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: ecommerce-kafka
+    ports:
+      - "9092:9092"
+
+volumes:
+  ecommerce_postgres_data:
+```
+
+Later this can also contain:
+
+```text
+API
+React
 Notification Service
 ```
 
-This will make local development and cloud deployment easier.
+---
+
+# Docker Commands
+
+Start containers:
+
+```powershell
+docker compose up -d
+```
+
+See containers:
+
+```powershell
+docker ps
+```
+
+See all containers:
+
+```powershell
+docker ps -a
+```
+
+Stop containers:
+
+```powershell
+docker compose down
+```
+
+Stop and remove volumes:
+
+```powershell
+docker compose down -v
+```
+
+⚠️ Warning:
+
+```text
+docker compose down -v
+```
+
+can delete persistent database data stored in Docker volumes.
+
+Do not run it unless you intentionally want to delete that data.
 
 ---
 
-# 📨 Kafka & Notification Service
+# Docker Logs
 
-The solution contains a separate:
+View all Docker Compose logs:
 
-```text
-EnterpriseECommerce.NotificationService
+```powershell
+docker compose logs
 ```
 
-The architecture is intended to support event-driven communication through Apache Kafka.
+Follow logs:
 
-Future events can include:
-
-```text
-OrderCreated
-PaymentSuccessful
-OrderConfirmed
-OrderShipped
-OrderDelivered
+```powershell
+docker compose logs -f
 ```
 
-Consumers can process these events asynchronously for:
+Kafka logs:
 
-- Email notifications
-- Order notifications
-- Payment confirmations
-- Shipping updates
+```powershell
+docker logs ecommerce-kafka
+```
+
+PostgreSQL logs:
+
+```powershell
+docker logs ecommerce-postgres
+```
 
 ---
 
-# ☁️ Cloud & DevOps Roadmap
+# 🗄️ IMPORTANT: DATABASE DATA VS MIGRATIONS
 
-The project is intended to demonstrate cloud and DevOps concepts using technologies such as:
+GitHub stores:
 
 ```text
-Docker
+Source code
+EF migrations
+Configuration examples
+Docker files
+```
+
+GitHub does NOT automatically store your local PostgreSQL database data.
+
+For example, this data may not exist after cloning on another laptop:
+
+```text
+Users
+Products
+Categories
+Orders
+Payments
+Inventory history
+```
+
+Running:
+
+```powershell
+dotnet ef database update
+```
+
+recreates the database structure, but not necessarily your old runtime data.
+
+---
+
+# Backup Existing PostgreSQL Database
+
+If you want to preserve the current database data, create a backup before moving computers.
+
+Example using pg_dump:
+
+```powershell
+pg_dump -U postgres -d EnterpriseECommerce -F c -f EnterpriseECommerce.backup
+```
+
+Restore later:
+
+```powershell
+pg_restore -U postgres -d EnterpriseECommerce EnterpriseECommerce.backup
+```
+
+Exact commands may vary depending on PostgreSQL installation and authentication.
+
+---
+
+# Recommended Future Seed Data
+
+The project should eventually contain automatic seed data for:
+
+```text
+Admin role
+User role
+Default permissions
+Main Admin
+Example Categories
+Example Products
+```
+
+Then a completely fresh database can be prepared automatically.
+
+---
+
+# 🔐 NEVER PUSH THESE TO GITHUB
+
+Do not commit:
+
+```text
+Real PostgreSQL passwords
+JWT Secret
+Razorpay Secret
+AWS Access Key
+AWS Secret Key
+Azure secrets
+Email passwords
+Private certificates
+Production connection strings
+```
+
+---
+
+# Recommended .gitignore Entries
+
+Your `.gitignore` should include appropriate entries such as:
+
+```gitignore
+bin/
+obj/
+
+node_modules/
+
+.env
+.env.*
+!.env.example
+
+appsettings.Development.json
+appsettings.Local.json
+
+*.user
+*.suo
+
+.vs/
+
+.vscode/
+
+coverage/
+
+dist/
+```
+
+Be careful before ignoring `appsettings.Development.json` if you intentionally want to commit a safe placeholder version.
+
+---
+
+# `.env.example`
+
+A future `.env.example` file can contain:
+
+```env
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DATABASE=EnterpriseECommerce
+POSTGRES_USERNAME=postgres
+POSTGRES_PASSWORD=CHANGE_ME
+
+JWT_SECRET=CHANGE_ME
+
+RAZORPAY_KEY_ID=CHANGE_ME
+RAZORPAY_KEY_SECRET=CHANGE_ME
+
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+
+SELLER_STATE=Maharashtra
+SELLER_STATE_CODE=27
+```
+
+Commit:
+
+```text
+.env.example
+```
+
+Do NOT commit:
+
+```text
+.env
+```
+
+---
+
+# 🧯 TROUBLESHOOTING
+
+## Problem: dotnet command not found
+
+Install the .NET SDK.
+
+Then verify:
+
+```powershell
+dotnet --version
+```
+
+---
+
+## Problem: npm command not found
+
+Install Node.js.
+
+Verify:
+
+```powershell
+node --version
+npm --version
+```
+
+---
+
+## Problem: PostgreSQL connection failed
+
+Check:
+
+```text
+PostgreSQL service is running
+Database exists
+Username is correct
+Password is correct
+Port is correct
+Connection string is correct
+```
+
+Default PostgreSQL port:
+
+```text
+5432
+```
+
+---
+
+## Problem: PendingModelChangesWarning
+
+If EF Core reports:
+
+```text
+The model for context 'AppDbContext' has pending changes
+```
+
+create a migration:
+
+```powershell
+dotnet ef migrations add MigrationName `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+Then:
+
+```powershell
+dotnet ef database update `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+---
+
+## Problem: Kafka says brokers are down
+
+Example:
+
+```text
+1/1 brokers are down
+localhost:9092
+```
+
+Check:
+
+```powershell
+docker ps
+```
+
+Make sure Kafka is running.
+
+Then verify configuration:
+
+```text
+localhost:9092
+```
+
+---
+
+## Problem: React cannot connect to API
+
+Check:
+
+```text
+API is running
+API URL is correct
+API port matches apiClient.js
+CORS is configured
+HTTPS certificate is trusted
+```
+
+---
+
+## Problem: HTTPS development certificate
+
+Run:
+
+```powershell
+dotnet dev-certs https --trust
+```
+
+Then restart the API.
+
+---
+
+## Problem: React dependencies missing
+
+Run:
+
+```powershell
+cd client
+npm install
+```
+
+Then:
+
+```powershell
+npm run dev
+```
+
+---
+
+## Problem: Build errors after pulling changes
+
+Run:
+
+```powershell
+dotnet clean
+dotnet restore
+dotnet build EnterpriseECommerce.slnx
+```
+
+For React:
+
+```powershell
+cd client
+npm install
+npm run dev
+```
+
+---
+
+# 🔄 HOW TO CONTINUE DEVELOPMENT LATER
+
+When returning to this project in the future:
+
+```powershell
+git pull origin main
+```
+
+Then:
+
+```powershell
+dotnet restore
+dotnet build EnterpriseECommerce.slnx
+```
+
+Frontend:
+
+```powershell
+cd client
+npm install
+```
+
+Check migrations:
+
+```powershell
+dotnet ef database update `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+Then start the application normally.
+
+---
+
+# 📤 HOW TO PUSH NEW CHANGES
+
+Check changes:
+
+```powershell
+git status
+```
+
+Stage:
+
+```powershell
+git add .
+```
+
+Commit:
+
+```powershell
+git commit -m "feat: describe the changes"
+```
+
+Push:
+
+```powershell
+git push origin main
+```
+
+---
+
+# 📥 HOW TO PULL LATEST CHANGES
+
+```powershell
+git pull origin main
+```
+
+---
+
+# 🌿 CREATE A FEATURE BRANCH
+
+Recommended for future development:
+
+```powershell
+git checkout -b feature/product-images
+```
+
+Work on the feature.
+
+Then:
+
+```powershell
+git add .
+git commit -m "feat: add product image support"
+git push -u origin feature/product-images
+```
+
+---
+
+# 📊 ADMIN FUNCTIONALITY
+
+The admin section supports / is designed for:
+
+```text
+Product Management
+Category Management
+Inventory
+Orders
+Users & Admins
+Permissions
+Reports
+Sales Reports
+Inventory Reports
+Payment Reports
+```
+
+---
+
+# 📦 INVENTORY
+
+Inventory functionality includes:
+
+```text
+Current Stock
+Low Stock
+Out of Stock
+Increase Stock
+Decrease Stock
+Inventory Value
+Product-wise inventory
+Category-wise inventory
+```
+
+---
+
+# 📈 REPORTS
+
+Current / planned reports include:
+
+```text
+Sales Report
+Order Report
+Payment Report
+Product Report
+Top Products
+Inventory Report
+Category-wise Inventory
+Product-wise Inventory
+GST Report
+Revenue Report
+```
+
+Export formats include or are planned for:
+
+```text
+CSV
+Excel
+PDF
+```
+
+---
+
+# 📨 KAFKA NOTIFICATION SERVICE
+
+Kafka topics currently used / planned include:
+
+```text
+order-events
+payment-events
+order-status-events
+```
+
+The Notification Service consumes events separately from the main API.
+
+This demonstrates an event-driven / microservice-style architecture.
+
+---
+
+# 🛣️ FUTURE ROADMAP
+
+Planned features:
+
+```text
+Product Images
+Multiple Product Images
+Brands
+Product Variants
+Color / Size
+Wishlist
+Ratings
+Reviews
+Advanced Search
+Pagination
+Coupons
+Discount Engine
+GST Invoice PDF
+Invoice Download
+Order Tracking
+Shipping Provider Integration
+Returns
+Replacement
+Refund Workflow
+Razorpay Webhooks
+Payment Reconciliation
+Seller Module
+Multi-vendor Marketplace
+Redis
+Background Jobs
+Kafka improvements
+Email Notifications
+Docker Compose
 CI/CD
-Azure
-AWS
+Azure Deployment
+AWS Deployment
 AWS ECS
-Kafka
-Cloud-hosted PostgreSQL
+Logging
+Monitoring
+Production Security
+Automated Testing
 ```
-
-These parts will continue to be expanded in future development phases.
-
----
-
-# 🛣️ Future Roadmap
-
-Planned improvements include:
-
-- Product image upload
-- Multiple product images
-- Brand management
-- Product variants
-- Size/color variants
-- Search and advanced filtering
-- Sorting
-- Pagination
-- Wishlist
-- Product reviews and ratings
-- Coupons
-- Advanced discount engine
-- Delivery serviceability by PIN code
-- Dynamic shipping charges
-- Shipping provider integration
-- Order tracking
-- Invoice generation
-- GST invoice PDF
-- Refund workflow
-- Return/replacement workflow
-- Razorpay webhook handling
-- Payment reconciliation
-- Seller/vendor module
-- Multiple sellers
-- Seller dashboard
-- Advanced sales reports
-- Revenue analytics
-- GST reports
-- Inventory history
-- Stock movement audit
-- Kafka event processing
-- Email notifications
-- Docker Compose
-- CI/CD pipeline
-- Azure deployment
-- AWS deployment
-- AWS ECS deployment
-- Logging and monitoring
-- Redis caching
-- Improved automated tests
-- Production security hardening
 
 ---
 
 # 🎯 Project Purpose
 
-This project was created to strengthen practical knowledge of enterprise .NET development and demonstrate how multiple technologies work together in a realistic application.
-
-Major concepts demonstrated include:
+The main purpose of this project is to demonstrate practical enterprise application development using:
 
 ```text
 ASP.NET Core
-REST APIs
-Clean Architecture
 C#
-Entity Framework Core
+.NET 10
+REST APIs
+React
 PostgreSQL
-React.js
+Entity Framework Core
 JWT
-Role-Based Authorization
-Razorpay
-GST Calculations
-Inventory Management
-Order Management
+Clean Architecture
 Repository Pattern
 Dependency Injection
+Role-Based Authorization
+Razorpay
 Kafka
 Docker
-Cloud Architecture
-Unit Testing
-Integration Testing
+GST
+Inventory
+Orders
+Reports
+Testing
+Cloud concepts
 ```
-
----
-
-# 📚 Learning Outcomes
-
-Building this project provides practical experience with:
-
-- Designing domain entities
-- Creating REST APIs
-- Implementing business rules
-- Working with PostgreSQL
-- Using Entity Framework Core
-- Managing migrations
-- Authentication and authorization
-- Secure password storage
-- JWT token generation
-- React/API integration
-- Shopping cart design
-- Order lifecycle management
-- Inventory management
-- Payment gateway integration
-- GST-aware e-commerce design
-- Clean Architecture
-- Repository Pattern
-- Dependency Injection
-- Testing
-- Microservice concepts
-- Event-driven architecture
-- Cloud and DevOps concepts
-
----
-
-# ⚠️ Current Development Status
-
-The current development phase has been **temporarily paused**.
-
-The repository represents the working state of the application at the end of the current development phase.
-
-Development will continue in a future phase with additional features, production hardening, cloud deployment, event-driven functionality and further UI/UX improvements.
 
 ---
 
@@ -1021,18 +1444,65 @@ Development will continue in a future phase with additional features, production
 
 .NET / ASP.NET Developer
 
-Technologies explored through this project:
+Project technologies:
 
 `C#` · `ASP.NET Core` · `.NET 10` · `React.js` · `PostgreSQL` · `Entity Framework Core` · `JWT` · `Razorpay` · `Kafka` · `Docker` · `Azure` · `AWS`
 
 ---
 
-# ⭐ Support
+# ⭐ Quick Reminder for Future Me
 
-If you find this project useful for learning enterprise ASP.NET Core architecture, feel free to star the repository.
+If I open this project after several months and forget everything:
+
+```text
+1. Clone repo
+2. Install .NET 10
+3. Install Node.js
+4. Install PostgreSQL
+5. Install Docker Desktop
+6. Configure appsettings / secrets
+7. Start PostgreSQL
+8. Start Kafka
+9. Run EF database update
+10. Run API
+11. Run NotificationService
+12. npm install
+13. npm run dev
+14. Open http://localhost:5173
+```
+
+Most useful commands:
+
+```powershell
+dotnet build EnterpriseECommerce.slnx
+```
+
+```powershell
+dotnet ef database update `
+  --project src\EnterpriseECommerce.Infrastructure\EnterpriseECommerce.Infrastructure.csproj `
+  --startup-project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.API\EnterpriseECommerce.API.csproj
+```
+
+```powershell
+dotnet run --project src\EnterpriseECommerce.NotificationService\EnterpriseECommerce.NotificationService.csproj
+```
+
+```powershell
+cd client
+npm install
+npm run dev
+```
+
+```powershell
+docker compose up -d
+```
 
 ---
 
-## 📄 License
+# 📄 License
 
-This project is currently intended for **learning, portfolio, and demonstration purposes**.
+This project is currently intended for learning, portfolio, interview preparation, and demonstration purposes.
