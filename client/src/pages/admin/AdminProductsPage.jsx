@@ -18,6 +18,18 @@ import {
 import './AdminProductsPage.css'
 
 // ============================================================
+// GST RATES
+// ============================================================
+
+const GST_RATES = [
+    0,
+    5,
+    12,
+    18,
+    28
+]
+
+// ============================================================
 // ADMIN PRODUCTS PAGE
 // ============================================================
 
@@ -27,14 +39,18 @@ function AdminProductsPage() {
     // DATA
     // ========================================================
 
-    const [products, setProducts] =
-        useState([])
+    const [
+        products,
+        setProducts
+    ] = useState([])
 
-    const [categories, setCategories] =
-        useState([])
+    const [
+        categories,
+        setCategories
+    ] = useState([])
 
     // ========================================================
-    // FORM MODE
+    // EDIT MODE
     // ========================================================
 
     const [
@@ -43,37 +59,51 @@ function AdminProductsPage() {
     ] = useState(null)
 
     // ========================================================
-    // FORM STATE
+    // FORM
     // ========================================================
 
-    const [formData, setFormData] =
-        useState({
-            categoryId: '',
-            name: '',
-            description: '',
-            sku: '',
-            price: '',
-            stockQuantity: ''
-        })
+    const [
+        formData,
+        setFormData
+    ] = useState({
+        categoryId: '',
+        name: '',
+        description: '',
+        sku: '',
+        hsnCode: '',
+        gstRate: '18',
+        price: '',
+        stockQuantity: ''
+    })
 
     // ========================================================
     // UI STATE
     // ========================================================
 
-    const [loading, setLoading] =
-        useState(true)
+    const [
+        loading,
+        setLoading
+    ] = useState(true)
 
-    const [saving, setSaving] =
-        useState(false)
+    const [
+        saving,
+        setSaving
+    ] = useState(false)
 
-    const [error, setError] =
-        useState('')
+    const [
+        error,
+        setError
+    ] = useState('')
 
-    const [message, setMessage] =
-        useState('')
+    const [
+        message,
+        setMessage
+    ] = useState('')
 
-    const [search, setSearch] =
-        useState('')
+    const [
+        search,
+        setSearch
+    ] = useState('')
 
     // ========================================================
     // LOAD PRODUCTS
@@ -145,7 +175,7 @@ function AdminProductsPage() {
     }
 
     // ========================================================
-    // INPUT CHANGE
+    // FORM CHANGE
     // ========================================================
 
     const handleChange =
@@ -159,7 +189,8 @@ function AdminProductsPage() {
             setFormData(
                 current => ({
                     ...current,
-                    [name]: value
+                    [name]:
+                        value
                 })
             )
         }
@@ -170,20 +201,24 @@ function AdminProductsPage() {
 
     const resetForm = () => {
 
-        setEditingProductId(null)
+        setEditingProductId(
+            null
+        )
 
         setFormData({
             categoryId: '',
             name: '',
             description: '',
             sku: '',
+            hsnCode: '',
+            gstRate: '18',
             price: '',
             stockQuantity: ''
         })
     }
 
     // ========================================================
-    // START EDIT
+    // EDIT PRODUCT
     // ========================================================
 
     const handleEdit =
@@ -195,22 +230,34 @@ function AdminProductsPage() {
 
             setFormData({
                 categoryId:
-                    product.categoryId,
+                    product.categoryId ?? '',
 
                 name:
-                    product.name,
+                    product.name ?? '',
 
                 description:
-                    product.description,
+                    product.description ?? '',
 
                 sku:
-                    product.sku,
+                    product.sku ?? '',
+
+                hsnCode:
+                    product.hsnCode ?? '',
+
+                gstRate:
+                    String(
+                        product.gstRate ?? 0
+                    ),
 
                 price:
-                    product.price,
+                    String(
+                        product.price ?? ''
+                    ),
 
                 stockQuantity:
-                    product.stockQuantity
+                    String(
+                        product.stockQuantity ?? ''
+                    )
             })
 
             setMessage('')
@@ -221,6 +268,119 @@ function AdminProductsPage() {
                 behavior: 'smooth'
             })
         }
+
+    // ========================================================
+    // VALIDATE
+    // ========================================================
+
+    const validateProductForm = () => {
+
+        if (!formData.name.trim()) {
+
+            setError(
+                'Product name is required.'
+            )
+
+            return false
+        }
+
+        if (!editingProductId) {
+
+            if (!formData.categoryId) {
+
+                setError(
+                    'Please select a category.'
+                )
+
+                return false
+            }
+
+            if (!formData.sku.trim()) {
+
+                setError(
+                    'SKU is required.'
+                )
+
+                return false
+            }
+        }
+
+        if (
+            formData.price === '' ||
+            Number.isNaN(
+                Number(formData.price)
+            )
+        ) {
+
+            setError(
+                'Valid selling price is required.'
+            )
+
+            return false
+        }
+
+        if (
+            Number(
+                formData.price
+            ) < 0
+        ) {
+
+            setError(
+                'Price cannot be negative.'
+            )
+
+            return false
+        }
+
+        if (
+            formData.stockQuantity === '' ||
+            Number.isNaN(
+                Number(
+                    formData.stockQuantity
+                )
+            )
+        ) {
+
+            setError(
+                'Valid stock quantity is required.'
+            )
+
+            return false
+        }
+
+        if (
+            Number(
+                formData.stockQuantity
+            ) < 0
+        ) {
+
+            setError(
+                'Stock quantity cannot be negative.'
+            )
+
+            return false
+        }
+
+        const gstRate =
+            Number(
+                formData.gstRate
+            )
+
+        if (
+            Number.isNaN(gstRate) ||
+            gstRate < 0 ||
+            gstRate > 100
+        ) {
+
+            setError(
+                'GST rate must be between 0 and 100.'
+            )
+
+            return false
+        }
+
+        return true
+    }
 
     // ========================================================
     // SAVE PRODUCT
@@ -234,37 +394,7 @@ function AdminProductsPage() {
             setError('')
             setMessage('')
 
-            if (!formData.name.trim()) {
-
-                setError(
-                    'Product name is required.'
-                )
-
-                return
-            }
-
-            if (
-                Number(
-                    formData.price
-                ) < 0
-            ) {
-
-                setError(
-                    'Price cannot be negative.'
-                )
-
-                return
-            }
-
-            if (
-                Number(
-                    formData.stockQuantity
-                ) < 0
-            ) {
-
-                setError(
-                    'Stock quantity cannot be negative.'
-                )
+            if (!validateProductForm()) {
 
                 return
             }
@@ -274,7 +404,7 @@ function AdminProductsPage() {
                 setSaving(true)
 
                 // =============================================
-                // EDIT MODE
+                // UPDATE
                 // =============================================
 
                 if (editingProductId) {
@@ -295,6 +425,14 @@ function AdminProductsPage() {
                         stockQuantity:
                             Number(
                                 formData.stockQuantity
+                            ),
+
+                        hsnCode:
+                            formData.hsnCode.trim(),
+
+                        gstRate:
+                            Number(
+                                formData.gstRate
                             )
                     }
 
@@ -309,28 +447,10 @@ function AdminProductsPage() {
                 }
 
                 // =============================================
-                // CREATE MODE
+                // CREATE
                 // =============================================
 
                 else {
-
-                    if (!formData.categoryId) {
-
-                        setError(
-                            'Please select a category.'
-                        )
-
-                        return
-                    }
-
-                    if (!formData.sku.trim()) {
-
-                        setError(
-                            'SKU is required.'
-                        )
-
-                        return
-                    }
 
                     const createData = {
 
@@ -344,7 +464,17 @@ function AdminProductsPage() {
                             formData.description.trim(),
 
                         sku:
-                            formData.sku.trim(),
+                            formData.sku
+                                .trim()
+                                .toUpperCase(),
+
+                        hsnCode:
+                            formData.hsnCode.trim(),
+
+                        gstRate:
+                            Number(
+                                formData.gstRate
+                            ),
 
                         price:
                             Number(
@@ -389,7 +519,7 @@ function AdminProductsPage() {
         }
 
     // ========================================================
-    // DEACTIVATE PRODUCT
+    // DEACTIVATE
     // ========================================================
 
     const handleDeactivate =
@@ -401,6 +531,7 @@ function AdminProductsPage() {
                 )
 
             if (!confirmed) {
+
                 return
             }
 
@@ -445,7 +576,7 @@ function AdminProductsPage() {
     }, [])
 
     // ========================================================
-    // HELPERS
+    // CATEGORY NAME
     // ========================================================
 
     const getCategoryName =
@@ -454,12 +585,19 @@ function AdminProductsPage() {
             const category =
                 categories.find(
                     item =>
-                        item.id === categoryId
+                        item.id ===
+                        categoryId
                 )
 
-            return category?.name ||
+            return (
+                category?.name ||
                 'Unknown Category'
+            )
         }
+
+    // ========================================================
+    // PRICE
+    // ========================================================
 
     const formatPrice =
         (price) =>
@@ -473,26 +611,119 @@ function AdminProductsPage() {
                 }
             )
 
+    // ========================================================
+    // GST EXTRACTED FROM INCLUSIVE PRICE
+    // ========================================================
+
+    const calculateIncludedGst =
+        (price, gstRate) => {
+
+            const sellingPrice =
+                Number(
+                    price ?? 0
+                )
+
+            const taxRate =
+                Number(
+                    gstRate ?? 0
+                )
+
+            if (
+                sellingPrice <= 0 ||
+                taxRate <= 0
+            ) {
+
+                return 0
+            }
+
+            const taxableValue =
+                sellingPrice *
+                100 /
+                (100 + taxRate)
+
+            return (
+                sellingPrice -
+                taxableValue
+            )
+        }
+
+    // ========================================================
+    // TAXABLE VALUE
+    // ========================================================
+
+    const calculateTaxableValue =
+        (price, gstRate) => {
+
+            const sellingPrice =
+                Number(
+                    price ?? 0
+                )
+
+            const taxRate =
+                Number(
+                    gstRate ?? 0
+                )
+
+            if (
+                sellingPrice <= 0
+            ) {
+
+                return 0
+            }
+
+            if (
+                taxRate <= 0
+            ) {
+
+                return sellingPrice
+            }
+
+            return (
+                sellingPrice *
+                100 /
+                (100 + taxRate)
+            )
+        }
+
+    // ========================================================
+    // STOCK STATUS
+    // ========================================================
+
     const getStockStatus =
         (stockQuantity) => {
 
-            if (stockQuantity === 0) {
+            if (
+                stockQuantity === 0
+            ) {
+
                 return {
-                    label: 'Out of Stock',
-                    className: 'danger'
+                    label:
+                        'Out of Stock',
+
+                    className:
+                        'danger'
                 }
             }
 
-            if (stockQuantity <= 5) {
+            if (
+                stockQuantity <= 5
+            ) {
+
                 return {
-                    label: 'Low Stock',
-                    className: 'warning'
+                    label:
+                        'Low Stock',
+
+                    className:
+                        'warning'
                 }
             }
 
             return {
-                label: 'In Stock',
-                className: 'success'
+                label:
+                    'In Stock',
+
+                className:
+                    'success'
             }
         }
 
@@ -509,6 +740,7 @@ function AdminProductsPage() {
                     .toLowerCase()
 
             if (!value) {
+
                 return products
             }
 
@@ -524,6 +756,8 @@ function AdminProductsPage() {
                         ${product.name ?? ''}
                         ${product.sku ?? ''}
                         ${product.description ?? ''}
+                        ${product.hsnCode ?? ''}
+                        ${product.gstRate ?? ''}
                         ${categoryName}
                     `.toLowerCase()
 
@@ -549,9 +783,9 @@ function AdminProductsPage() {
 
             <div className="admin-products-container">
 
-                {/* ==============================================
+                {/* =============================================
                     HEADER
-                   ============================================== */}
+                   ============================================= */}
 
                 <header className="admin-products-header">
 
@@ -566,8 +800,8 @@ function AdminProductsPage() {
                         </h1>
 
                         <p>
-                            Create, update and manage
-                            products in your catalog.
+                            Manage catalog information,
+                            GST, HSN codes, prices and inventory.
                         </p>
 
                     </div>
@@ -586,9 +820,9 @@ function AdminProductsPage() {
 
                 </header>
 
-                {/* ==============================================
+                {/* =============================================
                     ALERTS
-                   ============================================== */}
+                   ============================================= */}
 
                 {error && (
 
@@ -618,9 +852,9 @@ function AdminProductsPage() {
 
                 )}
 
-                {/* ==============================================
+                {/* =============================================
                     PRODUCT FORM
-                   ============================================== */}
+                   ============================================= */}
 
                 <section className="admin-product-form-card">
 
@@ -637,19 +871,23 @@ function AdminProductsPage() {
                             </span>
 
                             <h2>
+
                                 {
                                     editingProductId
                                         ? 'Edit Product'
                                         : 'Create Product'
                                 }
+
                             </h2>
 
                             <p>
+
                                 {
                                     editingProductId
-                                        ? 'Update the selected product information.'
-                                        : 'Add a new product to your catalog.'
+                                        ? 'Update product pricing, tax and inventory information.'
+                                        : 'Add a GST-ready product to your catalog.'
                                 }
+
                             </p>
 
                         </div>
@@ -671,19 +909,34 @@ function AdminProductsPage() {
 
                         <div className="admin-product-form-grid">
 
-                            {/* ==============================
+                            {/* =================================
                                 CATEGORY
-                               ============================== */}
+                               ================================= */}
 
-                            {!editingProductId && (
+                            <div className="admin-form-group">
 
-                                <div className="admin-form-group">
+                                <label htmlFor="categoryId">
+                                    Category
+                                </label>
 
-                                    <label
-                                        htmlFor="categoryId"
-                                    >
-                                        Category
-                                    </label>
+                                {editingProductId ? (
+
+                                    <div className="admin-readonly-field">
+
+                                        {
+                                            getCategoryName(
+                                                formData.categoryId
+                                            )
+                                        }
+
+                                        <span>
+                                            Category cannot currently
+                                            be changed while editing.
+                                        </span>
+
+                                    </div>
+
+                                ) : (
 
                                     <select
                                         id="categoryId"
@@ -722,19 +975,17 @@ function AdminProductsPage() {
 
                                     </select>
 
-                                </div>
+                                )}
 
-                            )}
+                            </div>
 
-                            {/* ==============================
-                                NAME
-                               ============================== */}
+                            {/* =================================
+                                PRODUCT NAME
+                               ================================= */}
 
                             <div className="admin-form-group">
 
-                                <label
-                                    htmlFor="name"
-                                >
+                                <label htmlFor="name">
                                     Product Name
                                 </label>
 
@@ -749,23 +1000,37 @@ function AdminProductsPage() {
                                     onChange={
                                         handleChange
                                     }
+                                    required
                                 />
 
                             </div>
 
-                            {/* ==============================
+                            {/* =================================
                                 SKU
-                               ============================== */}
+                               ================================= */}
 
-                            {!editingProductId && (
+                            <div className="admin-form-group">
 
-                                <div className="admin-form-group">
+                                <label htmlFor="sku">
+                                    SKU
+                                </label>
 
-                                    <label
-                                        htmlFor="sku"
-                                    >
-                                        SKU
-                                    </label>
+                                {editingProductId ? (
+
+                                    <div className="admin-readonly-field code">
+
+                                        {
+                                            formData.sku ||
+                                            '-'
+                                        }
+
+                                        <span>
+                                            SKU remains fixed after creation.
+                                        </span>
+
+                                    </div>
+
+                                ) : (
 
                                     <input
                                         id="sku"
@@ -774,54 +1039,96 @@ function AdminProductsPage() {
                                         value={
                                             formData.sku
                                         }
-                                        placeholder="Example: LAP-001"
+                                        placeholder="Example: MOUSE-001"
                                         onChange={
                                             handleChange
                                         }
+                                        required
                                     />
 
-                                </div>
+                                )}
 
-                            )}
+                            </div>
 
-                            {/* ==============================
-                                PRICE
-                               ============================== */}
+                            {/* =================================
+                                HSN CODE
+                               ================================= */}
 
                             <div className="admin-form-group">
 
-                                <label
-                                    htmlFor="price"
-                                >
-                                    Price
+                                <label htmlFor="hsnCode">
+                                    HSN Code
                                 </label>
 
                                 <input
-                                    id="price"
-                                    name="price"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
+                                    id="hsnCode"
+                                    name="hsnCode"
+                                    type="text"
                                     value={
-                                        formData.price
+                                        formData.hsnCode
                                     }
-                                    placeholder="0.00"
+                                    placeholder="Example: 8471"
+                                    maxLength="20"
                                     onChange={
                                         handleChange
                                     }
                                 />
 
+                                <small className="admin-field-help">
+                                    Used for GST invoices and tax reports.
+                                </small>
+
                             </div>
 
-                            {/* ==============================
-                                STOCK
-                               ============================== */}
+                            {/* =================================
+                                GST RATE
+                               ================================= */}
 
                             <div className="admin-form-group">
 
-                                <label
-                                    htmlFor="stockQuantity"
+                                <label htmlFor="gstRate">
+                                    GST Rate
+                                </label>
+
+                                <select
+                                    id="gstRate"
+                                    name="gstRate"
+                                    value={
+                                        formData.gstRate
+                                    }
+                                    onChange={
+                                        handleChange
+                                    }
                                 >
+
+                                    {GST_RATES.map(
+                                        rate => (
+
+                                            <option
+                                                key={rate}
+                                                value={rate}
+                                            >
+                                                {rate}% GST
+                                            </option>
+
+                                        )
+                                    )}
+
+                                </select>
+
+                                <small className="admin-field-help">
+                                    GST is included in the selling price.
+                                </small>
+
+                            </div>
+
+                            {/* =================================
+                                STOCK
+                               ================================= */}
+
+                            <div className="admin-form-group">
+
+                                <label htmlFor="stockQuantity">
                                     Stock Quantity
                                 </label>
 
@@ -830,6 +1137,7 @@ function AdminProductsPage() {
                                     name="stockQuantity"
                                     type="number"
                                     min="0"
+                                    step="1"
                                     value={
                                         formData.stockQuantity
                                     }
@@ -837,19 +1145,147 @@ function AdminProductsPage() {
                                     onChange={
                                         handleChange
                                     }
+                                    required
                                 />
 
                             </div>
 
-                            {/* ==============================
-                                DESCRIPTION
-                               ============================== */}
+                            {/* =================================
+                                SELLING PRICE
+                               ================================= */}
 
                             <div className="admin-form-group full-width">
 
-                                <label
-                                    htmlFor="description"
-                                >
+                                <label htmlFor="price">
+                                    Selling Price
+                                    {' '}
+                                    <span className="admin-gst-inclusive-label">
+                                        GST Inclusive
+                                    </span>
+                                </label>
+
+                                <div className="admin-price-input-wrap">
+
+                                    <span>
+                                        ₹
+                                    </span>
+
+                                    <input
+                                        id="price"
+                                        name="price"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={
+                                            formData.price
+                                        }
+                                        placeholder="0.00"
+                                        onChange={
+                                            handleChange
+                                        }
+                                        required
+                                    />
+
+                                </div>
+
+                                <small className="admin-field-help">
+                                    Enter the final customer-facing price.
+                                    GST will not be added again at checkout.
+                                </small>
+
+                                {
+                                    formData.price !== '' &&
+                                    Number(
+                                        formData.price
+                                    ) >= 0 &&
+                                    (
+
+                                        <div className="admin-tax-preview">
+
+                                            <div>
+
+                                                <span>
+                                                    Selling Price
+                                                </span>
+
+                                                <strong>
+                                                    ₹{
+                                                        formatPrice(
+                                                            formData.price
+                                                        )
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div>
+
+                                                <span>
+                                                    Taxable Value
+                                                </span>
+
+                                                <strong>
+                                                    ₹{
+                                                        formatPrice(
+                                                            calculateTaxableValue(
+                                                                formData.price,
+                                                                formData.gstRate
+                                                            )
+                                                        )
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div>
+
+                                                <span>
+                                                    Included GST
+                                                </span>
+
+                                                <strong>
+                                                    ₹{
+                                                        formatPrice(
+                                                            calculateIncludedGst(
+                                                                formData.price,
+                                                                formData.gstRate
+                                                            )
+                                                        )
+                                                    }
+                                                </strong>
+
+                                            </div>
+
+                                            <div>
+
+                                                <span>
+                                                    GST Rate
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        Number(
+                                                            formData.gstRate
+                                                        )
+                                                    }%
+                                                </strong>
+
+                                            </div>
+
+                                        </div>
+
+                                    )
+                                }
+
+                            </div>
+
+                            {/* =================================
+                                DESCRIPTION
+                               ================================= */}
+
+                            <div className="admin-form-group full-width">
+
+                                <label htmlFor="description">
                                     Description
                                 </label>
 
@@ -870,9 +1306,9 @@ function AdminProductsPage() {
 
                         </div>
 
-                        {/* ==================================
-                            FORM ACTIONS
-                           ================================== */}
+                        {/* =====================================
+                            ACTIONS
+                           ===================================== */}
 
                         <div className="admin-product-form-actions">
 
@@ -884,6 +1320,9 @@ function AdminProductsPage() {
                                     onClick={
                                         resetForm
                                     }
+                                    disabled={
+                                        saving
+                                    }
                                 >
                                     Cancel Edit
                                 </button>
@@ -893,8 +1332,11 @@ function AdminProductsPage() {
                             <button
                                 type="submit"
                                 className="admin-product-save-button"
-                                disabled={saving}
+                                disabled={
+                                    saving
+                                }
                             >
+
                                 {
                                     saving
                                         ? 'Saving...'
@@ -902,6 +1344,7 @@ function AdminProductsPage() {
                                             ? 'Update Product'
                                             : 'Create Product'
                                 }
+
                             </button>
 
                         </div>
@@ -910,9 +1353,9 @@ function AdminProductsPage() {
 
                 </section>
 
-                {/* ==============================================
-                    PRODUCTS LIST
-                   ============================================== */}
+                {/* =============================================
+                    PRODUCT LIST
+                   ============================================= */}
 
                 <section className="admin-products-list-section">
 
@@ -931,20 +1374,24 @@ function AdminProductsPage() {
                         </div>
 
                         <span className="admin-products-total">
+
                             {products.length}
+
                             {' '}
+
                             {
                                 products.length === 1
                                     ? 'product'
                                     : 'products'
                             }
+
                         </span>
 
                     </div>
 
-                    {/* ==========================================
+                    {/* =========================================
                         SEARCH
-                       ========================================== */}
+                       ========================================= */}
 
                     <div className="admin-products-toolbar">
 
@@ -952,8 +1399,10 @@ function AdminProductsPage() {
 
                             <input
                                 type="search"
-                                value={search}
-                                placeholder="Search by product, SKU or category..."
+                                value={
+                                    search
+                                }
+                                placeholder="Search product, SKU, HSN, GST or category..."
                                 onChange={
                                     event =>
                                         setSearch(
@@ -995,9 +1444,9 @@ function AdminProductsPage() {
 
                     </div>
 
-                    {/* ==========================================
+                    {/* =========================================
                         LOADING
-                       ========================================== */}
+                       ========================================= */}
 
                     {loading ? (
 
@@ -1049,7 +1498,15 @@ function AdminProductsPage() {
                                         </th>
 
                                         <th>
-                                            Price
+                                            HSN
+                                        </th>
+
+                                        <th>
+                                            GST
+                                        </th>
+
+                                        <th>
+                                            Selling Price
                                         </th>
 
                                         <th>
@@ -1078,6 +1535,12 @@ function AdminProductsPage() {
                                                     product.stockQuantity
                                                 )
 
+                                            const includedGst =
+                                                calculateIncludedGst(
+                                                    product.price,
+                                                    product.gstRate
+                                                )
+
                                             return (
 
                                                 <tr
@@ -1094,10 +1557,12 @@ function AdminProductsPage() {
 
                                                             <div className="admin-product-avatar">
 
-                                                                {product.name
-                                                                    ?.charAt(0)
-                                                                    .toUpperCase()
-                                                                    || 'P'}
+                                                                {
+                                                                    product.name
+                                                                        ?.charAt(0)
+                                                                        .toUpperCase()
+                                                                    || 'P'
+                                                                }
 
                                                             </div>
 
@@ -1126,35 +1591,90 @@ function AdminProductsPage() {
                                                         data-label="SKU"
                                                         className="admin-product-sku"
                                                     >
-                                                        {product.sku}
+                                                        {
+                                                            product.sku
+                                                        }
                                                     </td>
 
                                                     <td
                                                         data-label="Category"
                                                     >
+
                                                         {
                                                             getCategoryName(
                                                                 product.categoryId
                                                             )
                                                         }
+
                                                     </td>
 
                                                     <td
-                                                        data-label="Price"
+                                                        data-label="HSN"
                                                     >
-                                                        ₹{formatPrice(
-                                                            product.price
-                                                        )}
+
+                                                        <span className="admin-hsn-code">
+
+                                                            {
+                                                                product.hsnCode ||
+                                                                '—'
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="GST"
+                                                    >
+
+                                                        <span
+                                                            className="admin-gst-badge"
+                                                        >
+                                                            {
+                                                                Number(
+                                                                    product.gstRate ?? 0
+                                                                )
+                                                            }%
+                                                        </span>
+
+                                                    </td>
+
+                                                    <td
+                                                        data-label="Selling Price"
+                                                    >
+
+                                                        <div className="admin-price-cell">
+
+                                                            <strong>
+                                                                ₹{
+                                                                    formatPrice(
+                                                                        product.price
+                                                                    )
+                                                                }
+                                                            </strong>
+
+                                                            <span>
+                                                                Includes ₹{
+                                                                    formatPrice(
+                                                                        includedGst
+                                                                    )
+                                                                } GST
+                                                            </span>
+
+                                                        </div>
+
                                                     </td>
 
                                                     <td
                                                         data-label="Stock"
                                                     >
+
                                                         <strong>
                                                             {
                                                                 product.stockQuantity
                                                             }
                                                         </strong>
+
                                                     </td>
 
                                                     <td

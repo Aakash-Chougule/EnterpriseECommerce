@@ -24,10 +24,42 @@ import './PaymentPage.css'
 function loadRazorpayScript() {
 
     return new Promise(
-        (resolve) => {
+        resolve => {
 
+            // Razorpay already available.
             if (window.Razorpay) {
+
                 resolve(true)
+
+                return
+            }
+
+            // Prevent duplicate script tags.
+            const existingScript =
+                document.querySelector(
+                    'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+                )
+
+            if (existingScript) {
+
+                existingScript.addEventListener(
+                    'load',
+                    () =>
+                        resolve(true),
+                    {
+                        once: true
+                    }
+                )
+
+                existingScript.addEventListener(
+                    'error',
+                    () =>
+                        resolve(false),
+                    {
+                        once: true
+                    }
+                )
+
                 return
             }
 
@@ -39,11 +71,16 @@ function loadRazorpayScript() {
             script.src =
                 'https://checkout.razorpay.com/v1/checkout.js'
 
+            script.async =
+                true
+
             script.onload =
-                () => resolve(true)
+                () =>
+                    resolve(true)
 
             script.onerror =
-                () => resolve(false)
+                () =>
+                    resolve(false)
 
             document.body.appendChild(
                 script
@@ -58,7 +95,9 @@ function loadRazorpayScript() {
 
 function PaymentPage() {
 
-    const { orderId } =
+    const {
+        orderId
+    } =
         useParams()
 
     const navigate =
@@ -77,15 +116,87 @@ function PaymentPage() {
         useState('')
 
     // ========================================================
-    // LOAD PAYMENT
+    // NORMALIZE PAYMENT METHOD
+    // ========================================================
+
+    const normalizePaymentMethod =
+        value => {
+
+            return String(
+                value ?? ''
+            )
+                .trim()
+                .toUpperCase()
+                .replace(/\s+/g, '')
+        }
+
+    // ========================================================
+    // PAYMENT STATUS HELPERS
+    // ========================================================
+
+    const getPaymentStatusLabel =
+        status => {
+
+            switch (
+            Number(status)
+            ) {
+
+                case 1:
+                    return 'Pending'
+
+                case 2:
+                    return 'Successful'
+
+                case 3:
+                    return 'Failed'
+
+                case 4:
+                    return 'Refunded'
+
+                default:
+                    return 'Unknown'
+            }
+        }
+
+    // ========================================================
+    // LOAD EXISTING PAYMENT
+    // ========================================================
+    //
+    // IMPORTANT:
+    //
+    // We DO NOT create another internal Payment here.
+    //
+    // Continue Payment:
+    //
+    // orderId
+    //   ↓
+    // existing Payment
+    //   ↓
+    // Razorpay
     // ========================================================
 
     const loadPayment =
         async () => {
 
+            if (!orderId) {
+
+                setError(
+                    'Order ID is missing.'
+                )
+
+                setLoading(
+                    false
+                )
+
+                return
+            }
+
             try {
 
-                setLoading(true)
+                setLoading(
+                    true
+                )
+
                 setError('')
 
                 const data =
@@ -97,17 +208,65 @@ function PaymentPage() {
                     data
                 )
 
-                // COD should never reach Razorpay page.
+                const paymentMethod =
+                    normalizePaymentMethod(
+                        data.paymentMethod
+                    )
+
+                // =============================================
+                // COD SHOULD NOT USE RAZORPAY
+                // =============================================
+
                 if (
-                    data.paymentMethod
-                        ?.toUpperCase() ===
-                    'COD'
+                    paymentMethod === 'COD' ||
+                    paymentMethod === 'CASHONDELIVERY'
                 ) {
+
                     navigate(
                         `/order-success/${orderId}`,
                         {
                             replace: true
                         }
+                    )
+
+                    return
+                }
+
+                // =============================================
+                // ALREADY PAID
+                // =============================================
+                //
+                // PaymentStatus.Success = 2
+                // =============================================
+
+                if (
+                    Number(
+                        data.status
+                    ) === 2
+                ) {
+
+                    navigate(
+                        `/order-success/${orderId}`,
+                        {
+                            replace: true
+                        }
+                    )
+
+                    return
+                }
+
+                // =============================================
+                // REFUNDED
+                // =============================================
+
+                if (
+                    Number(
+                        data.status
+                    ) === 4
+                ) {
+
+                    setError(
+                        'This payment has already been refunded and cannot be paid again.'
                     )
                 }
             }
@@ -125,15 +284,24 @@ function PaymentPage() {
             }
             finally {
 
-                setLoading(false)
+                setLoading(
+                    false
+                )
             }
         }
 
-    useEffect(() => {
+    // ========================================================
+    // INITIAL LOAD
+    // ========================================================
 
-        loadPayment()
+    useEffect(
+        () => {
 
-    }, [orderId])
+            loadPayment()
+
+        },
+        [orderId]
+    )
 
     // ========================================================
     // PAY WITH RAZORPAY
@@ -143,17 +311,60 @@ function PaymentPage() {
         async () => {
 
             if (!payment) {
+
+                return
+            }
+
+            if (processing) {
+
+                return
+            }
+
+            // =============================================
+            // DO NOT PAY AGAIN IF SUCCESSFUL
+            // =============================================
+
+            if (
+                Number(
+                    payment.status
+                ) === 2
+            ) {
+
+                navigate(
+                    `/order-success/${orderId}`
+                )
+
+                return
+            }
+
+            // =============================================
+            // DO NOT PAY REFUNDED PAYMENT
+            // =============================================
+
+            if (
+                Number(
+                    payment.status
+                ) === 4
+            ) {
+
+                setError(
+                    'This payment has already been refunded.'
+                )
+
                 return
             }
 
             try {
 
-                setProcessing(true)
+                setProcessing(
+                    true
+                )
+
                 setError('')
 
-                // --------------------------------------------
-                // Load Razorpay Checkout SDK
-                // --------------------------------------------
+                // =============================================
+                // LOAD RAZORPAY CHECKOUT SDK
+                // =============================================
 
                 const loaded =
                     await loadRazorpayScript()
@@ -161,46 +372,103 @@ function PaymentPage() {
                 if (!loaded) {
 
                     throw new Error(
-                        'Unable to load Razorpay Checkout.'
+                        'Unable to load Razorpay Checkout. Please check your internet connection.'
                     )
                 }
 
-                // --------------------------------------------
-                // Create gateway order from backend
-                // --------------------------------------------
+                // =============================================
+                // CREATE / GET RAZORPAY ORDER
+                // =============================================
+                //
+                // This uses:
+                //
+                // payment.id
+                //
+                // NOT:
+                //
+                // createPayment(...)
+                //
+                // So the existing payment is reused.
+                // =============================================
 
                 const razorpayOrder =
                     await createRazorpayOrder(
                         payment.id
                     )
 
-                // --------------------------------------------
-                // Checkout configuration
-                // --------------------------------------------
+                if (
+                    !razorpayOrder
+                        ?.razorpayOrderId
+                ) {
 
-                const options = {
+                    throw new Error(
+                        'Razorpay Order ID was not returned by the server.'
+                    )
+                }
+
+                if (
+                    !razorpayOrder
+                        ?.keyId
+                ) {
+
+                    throw new Error(
+                        'Razorpay Key ID was not returned by the server.'
+                    )
+                }
+
+                // =============================================
+                // RAZORPAY CHECKOUT OPTIONS
+                // =============================================
+
+                const options =
+                {
+
+                    // -------------------------------------
+                    // PUBLIC RAZORPAY KEY
+                    // -------------------------------------
 
                     key:
                         razorpayOrder.keyId,
+
+                    // -------------------------------------
+                    // AMOUNT
+                    //
+                    // Razorpay expects paise.
+                    //
+                    // Backend should already return the
+                    // correct Razorpay amount.
+                    // -------------------------------------
 
                     amount:
                         razorpayOrder.amount,
 
                     currency:
-                        razorpayOrder.currency,
+                        razorpayOrder.currency ||
+                        'INR',
+
+                    // -------------------------------------
+                    // BUSINESS
+                    // -------------------------------------
 
                     name:
                         'Enterprise E-Commerce',
 
                     description:
-                        `Payment for ${razorpayOrder.orderNumber}`,
+                        razorpayOrder.orderNumber
+                            ? `Payment for ${razorpayOrder.orderNumber}`
+                            : 'Order Payment',
+
+                    // -------------------------------------
+                    // RAZORPAY ORDER
+                    // -------------------------------------
 
                     order_id:
-                        razorpayOrder.razorpayOrderId,
+                        razorpayOrder
+                            .razorpayOrderId,
 
-                    // ========================================
+                    // =====================================
                     // SUCCESS CALLBACK
-                    // ========================================
+                    // =====================================
 
                     handler:
                         async function (
@@ -209,20 +477,50 @@ function PaymentPage() {
 
                             try {
 
-                                setProcessing(true)
-
-                                await verifyRazorpayPayment(
-                                    payment.id,
-                                    response.razorpay_payment_id,
-                                    response.razorpay_order_id,
-                                    response.razorpay_signature
+                                setProcessing(
+                                    true
                                 )
+
+                                setError('')
+
+                                // =================================
+                                // VERIFY ON BACKEND
+                                // =================================
+                                //
+                                // Never trust the frontend alone.
+                                // Backend verifies signature using
+                                // Razorpay Secret.
+                                // =================================
+
+                                const verifiedPayment =
+                                    await verifyRazorpayPayment(
+                                        payment.id,
+                                        response
+                                            .razorpay_payment_id,
+                                        response
+                                            .razorpay_order_id,
+                                        response
+                                            .razorpay_signature
+                                    )
+
+                                setPayment(
+                                    verifiedPayment
+                                )
+
+                                // =================================
+                                // PAYMENT COMPLETE
+                                // =================================
 
                                 navigate(
-                                    `/order-success/${orderId}`
+                                    `/order-success/${orderId}`,
+                                    {
+                                        replace: true
+                                    }
                                 )
                             }
-                            catch (verifyError) {
+                            catch (
+                            verifyError
+                            ) {
 
                                 console.error(
                                     'Razorpay verification failed:',
@@ -234,27 +532,44 @@ function PaymentPage() {
                                         .response
                                         ?.data
                                         ?.message ||
-                                    'Payment verification failed.'
+                                    'Payment was received but verification failed. Please do not make another payment until the payment status is checked.'
                                 )
 
-                                setProcessing(false)
+                                setProcessing(
+                                    false
+                                )
                             }
                         },
 
-                    prefill: {
+                    // =====================================
+                    // CUSTOMER PREFILL
+                    // =====================================
+
+                    prefill:
+                    {
 
                         name:
-                            razorpayOrder.customerName,
+                            razorpayOrder
+                                .customerName ||
+                            '',
 
                         email:
-                            razorpayOrder.customerEmail,
+                            razorpayOrder
+                                .customerEmail ||
+                            '',
 
                         contact:
-                            razorpayOrder.customerPhone ||
+                            razorpayOrder
+                                .customerPhone ||
                             ''
                     },
 
-                    notes: {
+                    // =====================================
+                    // INTERNAL REFERENCES
+                    // =====================================
+
+                    notes:
+                    {
 
                         internalPaymentId:
                             payment.id,
@@ -263,12 +578,23 @@ function PaymentPage() {
                             orderId
                     },
 
-                    theme: {
+                    // =====================================
+                    // UI
+                    // =====================================
+
+                    theme:
+                    {
+
                         color:
                             '#2563eb'
                     },
 
-                    modal: {
+                    // =====================================
+                    // MODAL
+                    // =====================================
+
+                    modal:
+                    {
 
                         ondismiss:
                             function () {
@@ -280,14 +606,18 @@ function PaymentPage() {
                     }
                 }
 
+                // =============================================
+                // OPEN RAZORPAY CHECKOUT
+                // =============================================
+
                 const razorpay =
                     new window.Razorpay(
                         options
                     )
 
-                // ============================================
-                // PAYMENT FAILURE EVENT
-                // ============================================
+                // =============================================
+                // PAYMENT FAILED
+                // =============================================
 
                 razorpay.on(
                     'payment.failed',
@@ -300,17 +630,31 @@ function PaymentPage() {
                             response.error
                         )
 
+                        const reason =
+                            response
+                                .error
+                                ?.description ||
+                            'Razorpay payment failed.'
+
+                        // =====================================
+                        // STORE FAILURE
+                        // =====================================
+
                         try {
 
-                            await markPaymentFailed(
-                                payment.id,
-                                response
-                                    .error
-                                    ?.description ||
-                                'Razorpay payment failed.'
+                            const failedPayment =
+                                await markPaymentFailed(
+                                    payment.id,
+                                    reason
+                                )
+
+                            setPayment(
+                                failedPayment
                             )
                         }
-                        catch (failureUpdateError) {
+                        catch (
+                        failureUpdateError
+                        ) {
 
                             console.error(
                                 'Unable to save payment failure:',
@@ -319,10 +663,7 @@ function PaymentPage() {
                         }
 
                         setError(
-                            response
-                                .error
-                                ?.description ||
-                            'Payment failed.'
+                            `${reason} You can return to your orders and try again if the order is still eligible for payment.`
                         )
 
                         setProcessing(
@@ -330,10 +671,6 @@ function PaymentPage() {
                         )
                     }
                 )
-
-                // ============================================
-                // OPEN CHECKOUT
-                // ============================================
 
                 razorpay.open()
             }
@@ -350,7 +687,9 @@ function PaymentPage() {
                     'Unable to start payment.'
                 )
 
-                setProcessing(false)
+                setProcessing(
+                    false
+                )
             }
         }
 
@@ -365,8 +704,11 @@ function PaymentPage() {
             ).toLocaleString(
                 'en-IN',
                 {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+                    minimumFractionDigits:
+                        2,
+
+                    maximumFractionDigits:
+                        2
                 }
             )
 
@@ -399,6 +741,25 @@ function PaymentPage() {
     }
 
     // ========================================================
+    // PAYMENT STATE
+    // ========================================================
+
+    const paymentStatus =
+        Number(
+            payment?.status
+        )
+
+    const paymentStatusLabel =
+        getPaymentStatusLabel(
+            paymentStatus
+        )
+
+    const canPay =
+        payment &&
+        paymentStatus !== 2 &&
+        paymentStatus !== 4
+
+    // ========================================================
     // UI
     // ========================================================
 
@@ -407,6 +768,10 @@ function PaymentPage() {
         <main className="payment-page">
 
             <div className="payment-container">
+
+                {/* ==================================================
+                    HEADER
+                   ================================================== */}
 
                 <header className="payment-header">
 
@@ -419,11 +784,16 @@ function PaymentPage() {
                     </h1>
 
                     <p>
-                        Your payment is securely
-                        processed by Razorpay.
+                        Your order already exists.
+                        Complete the pending payment
+                        securely through Razorpay.
                     </p>
 
                 </header>
+
+                {/* ==================================================
+                    ERROR
+                   ================================================== */}
 
                 {error && (
 
@@ -436,6 +806,10 @@ function PaymentPage() {
 
                 )}
 
+                {/* ==================================================
+                    PAYMENT NOT FOUND
+                   ================================================== */}
+
                 {!payment ? (
 
                     <section className="payment-empty">
@@ -444,10 +818,17 @@ function PaymentPage() {
                             Payment not found
                         </h2>
 
+                        <p>
+                            We could not find a payment
+                            for this order.
+                        </p>
+
                         <button
                             type="button"
                             onClick={() =>
-                                navigate('/orders')
+                                navigate(
+                                    '/orders'
+                                )
                             }
                         >
                             View My Orders
@@ -458,6 +839,10 @@ function PaymentPage() {
                 ) : (
 
                     <div className="payment-layout">
+
+                        {/* ==========================================
+                            PAYMENT INFORMATION
+                           ========================================== */}
 
                         <section className="payment-card">
 
@@ -485,6 +870,8 @@ function PaymentPage() {
 
                             <div className="payment-details">
 
+                                {/* PAYMENT METHOD */}
+
                                 <div className="payment-detail-row">
 
                                     <span>
@@ -500,6 +887,24 @@ function PaymentPage() {
 
                                 </div>
 
+                                {/* STATUS */}
+
+                                <div className="payment-detail-row">
+
+                                    <span>
+                                        Payment Status
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            paymentStatusLabel
+                                        }
+                                    </strong>
+
+                                </div>
+
+                                {/* PAYMENT ID */}
+
                                 <div className="payment-detail-row">
 
                                     <span>
@@ -511,6 +916,8 @@ function PaymentPage() {
                                     </strong>
 
                                 </div>
+
+                                {/* ORDER ID */}
 
                                 <div className="payment-detail-row">
 
@@ -528,37 +935,149 @@ function PaymentPage() {
 
                         </section>
 
+                        {/* ==========================================
+                            RAZORPAY ACTION
+                           ========================================== */}
+
                         <aside className="payment-actions-card">
 
                             <span className="payment-actions-label">
                                 Razorpay
                             </span>
 
-                            <h2>
-                                Pay Securely
-                            </h2>
+                            {/* ======================================
+                                SUCCESS
+                               ====================================== */}
 
-                            <p>
-                                Pay using UPI, card,
-                                net banking or another
-                                payment option supported
-                                by Razorpay.
-                            </p>
+                            {paymentStatus === 2 ? (
 
-                            <button
-                                type="button"
-                                className="payment-success-button"
-                                disabled={processing}
-                                onClick={handlePayNow}
-                            >
-                                {
-                                    processing
-                                        ? 'Please wait...'
-                                        : `Pay ₹${formatPrice(
-                                            payment.amount
-                                        )}`
-                                }
-                            </button>
+                                <>
+
+                                    <h2>
+                                        Payment Complete
+                                    </h2>
+
+                                    <p>
+                                        This payment has already
+                                        been completed successfully.
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        className="payment-success-button"
+                                        onClick={() =>
+                                            navigate(
+                                                `/order-success/${orderId}`
+                                            )
+                                        }
+                                    >
+                                        View Order
+                                    </button>
+
+                                </>
+
+                            ) : paymentStatus === 4 ? (
+
+                                // =================================
+                                // REFUNDED
+                                // =================================
+
+                                <>
+
+                                    <h2>
+                                        Payment Refunded
+                                    </h2>
+
+                                    <p>
+                                        This payment has already
+                                        been refunded and cannot
+                                        be paid again.
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        className="payment-success-button"
+                                        onClick={() =>
+                                            navigate(
+                                                '/orders'
+                                            )
+                                        }
+                                    >
+                                        View My Orders
+                                    </button>
+
+                                </>
+
+                            ) : (
+
+                                // =================================
+                                // PENDING / FAILED
+                                // =================================
+
+                                <>
+
+                                    <h2>
+                                        Pay Securely
+                                    </h2>
+
+                                    <p>
+                                        Pay using UPI, card,
+                                        net banking or another
+                                        payment option supported
+                                        by Razorpay.
+                                    </p>
+
+                                    <button
+                                        type="button"
+                                        className="payment-success-button"
+                                        disabled={
+                                            processing ||
+                                            !canPay
+                                        }
+                                        onClick={
+                                            handlePayNow
+                                        }
+                                    >
+
+                                        {
+                                            processing
+                                                ? 'Please wait...'
+                                                : paymentStatus === 3
+                                                    ? `Retry Payment ₹${formatPrice(
+                                                        payment.amount
+                                                    )}`
+                                                    : `Pay ₹${formatPrice(
+                                                        payment.amount
+                                                    )}`
+                                        }
+
+                                    </button>
+
+                                    {/* RETURN WITHOUT CREATING
+                                        ANOTHER ORDER */}
+
+                                    <button
+                                        type="button"
+                                        className="payment-back-button"
+                                        disabled={
+                                            processing
+                                        }
+                                        onClick={() =>
+                                            navigate(
+                                                `/order-success/${orderId}`
+                                            )
+                                        }
+                                    >
+                                        Back to Order
+                                    </button>
+
+                                </>
+
+                            )}
+
+                            {/* ======================================
+                                SECURITY
+                               ====================================== */}
 
                             <div className="payment-security-note">
 
@@ -567,9 +1086,10 @@ function PaymentPage() {
                                 </span>
 
                                 <p>
-                                    Payment details are
-                                    handled securely by
-                                    Razorpay.
+                                    Payment details are handled
+                                    securely by Razorpay.
+                                    Your Razorpay secret key is
+                                    never exposed to the browser.
                                 </p>
 
                             </div>

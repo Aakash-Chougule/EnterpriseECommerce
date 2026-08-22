@@ -10,10 +10,9 @@
 
 .admin-products-container {
     width: 100%;
-    max-width: 1250px;
+    max-width: 1400px;
     margin: 0 auto;
 }
-
 
 /* ============================================================
    HEADER
@@ -40,11 +39,11 @@
 .admin-products-header h1 {
     margin: 0;
     color: #0f172a;
-    font-size: clamp( 30px, 4vw, 42px );
+    font-size: clamp(30px, 4vw, 42px);
 }
 
 .admin-products-header p {
-    max-width: 600px;
+    max-width: 650px;
     margin: 9px 0 0;
     color: #64748b;
     font-size: 14px;
@@ -71,9 +70,8 @@
         font-size: 10px;
     }
 
-
 /* ============================================================
-   ALERT
+   ALERTS
    ============================================================ */
 
 .admin-products-alert {
@@ -108,7 +106,6 @@
         background: #f0fdf4;
         color: #15803d;
     }
-
 
 /* ============================================================
    FORM CARD
@@ -161,7 +158,6 @@
     text-transform: uppercase;
 }
 
-
 /* ============================================================
    FORM
    ============================================================ */
@@ -206,7 +202,7 @@
 
     .admin-form-group input,
     .admin-form-group select {
-        height: 42px;
+        height: 44px;
         padding: 0 12px;
     }
 
@@ -223,6 +219,121 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
+/* ============================================================
+   FIELD HELP
+   ============================================================ */
+
+.admin-field-help {
+    color: #94a3b8;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   READ ONLY
+   ============================================================ */
+
+.admin-readonly-field {
+    min-height: 44px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+    .admin-readonly-field span {
+        color: #94a3b8;
+        font-size: 8px;
+        font-weight: 500;
+    }
+
+    .admin-readonly-field.code {
+        font-family: monospace;
+    }
+
+/* ============================================================
+   GST LABEL
+   ============================================================ */
+
+.admin-gst-inclusive-label {
+    display: inline-flex;
+    margin-left: 4px;
+    padding: 3px 7px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   PRICE INPUT
+   ============================================================ */
+
+.admin-price-input-wrap {
+    position: relative;
+}
+
+    .admin-price-input-wrap > span {
+        position: absolute;
+        top: 50%;
+        left: 13px;
+        z-index: 1;
+        transform: translateY(-50%);
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .admin-price-input-wrap input {
+        padding-left: 31px;
+    }
+
+/* ============================================================
+   TAX PREVIEW
+   ============================================================ */
+
+.admin-tax-preview {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 5px;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    background: #f8fbff;
+}
+
+    .admin-tax-preview > div {
+        min-width: 0;
+    }
+
+    .admin-tax-preview span {
+        display: block;
+        margin-bottom: 4px;
+        color: #64748b;
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .admin-tax-preview strong {
+        display: block;
+        overflow: hidden;
+        color: #0f172a;
+        font-size: 13px;
+        text-overflow: ellipsis;
+    }
 
 /* ============================================================
    FORM ACTIONS
@@ -269,9 +380,8 @@
     color: #475569;
 }
 
-
 /* ============================================================
-   PRODUCT LIST SECTION
+   LIST
    ============================================================ */
 
 .admin-products-list-section {
@@ -309,7 +419,6 @@
     font-size: 10px;
 }
 
-
 /* ============================================================
    TOOLBAR
    ============================================================ */
@@ -328,7 +437,7 @@
 
 .admin-products-search {
     position: relative;
-    width: min(430px, 100%);
+    width: min(520px, 100%);
 }
 
     .admin-products-search input {
@@ -352,9 +461,9 @@
         position: absolute;
         top: 50%;
         right: 8px;
-        transform: translateY(-50%);
         width: 24px;
         height: 24px;
+        transform: translateY(-50%);
         border: none;
         border-radius: 50%;
         background: #e2e8f0;
@@ -368,7 +477,6 @@
     white-space: nowrap;
 }
 
-
 /* ============================================================
    TABLE
    ============================================================ */
@@ -380,6 +488,7 @@
 
 .admin-products-table {
     width: 100%;
+    min-width: 1150px;
     border-collapse: collapse;
 }
 
@@ -407,9 +516,8 @@
         background: #f8fafc;
     }
 
-
 /* ============================================================
-   PRODUCT CELL
+   PRODUCT
    ============================================================ */
 
 .admin-product-name-cell {
@@ -455,6 +563,55 @@
     font-size: 10px !important;
 }
 
+/* ============================================================
+   HSN
+   ============================================================ */
+
+.admin-hsn-code {
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: #f1f5f9;
+    color: #475569;
+    font-family: monospace;
+    font-size: 9px;
+}
+
+/* ============================================================
+   GST
+   ============================================================ */
+
+.admin-gst-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 20px;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+/* ============================================================
+   PRICE CELL
+   ============================================================ */
+
+.admin-price-cell {
+    min-width: 110px;
+}
+
+    .admin-price-cell strong {
+        display: block;
+        color: #0f172a;
+        font-size: 11px;
+    }
+
+    .admin-price-cell span {
+        display: block;
+        margin-top: 3px;
+        color: #94a3b8;
+        font-size: 8px;
+        white-space: nowrap;
+    }
 
 /* ============================================================
    STATUS
@@ -485,9 +642,8 @@
         color: #b91c1c;
     }
 
-
 /* ============================================================
-   TABLE ACTIONS
+   ACTIONS
    ============================================================ */
 
 .admin-product-actions {
@@ -525,7 +681,6 @@
         background: #fef2f2;
     }
 
-
 /* ============================================================
    LOADING
    ============================================================ */
@@ -560,7 +715,6 @@
     }
 }
 
-
 /* ============================================================
    EMPTY
    ============================================================ */
@@ -582,21 +736,23 @@
         font-size: 11px;
     }
 
-
 /* ============================================================
    TABLET
    ============================================================ */
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
 
     .admin-product-form-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .admin-tax-preview {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-
 /* ============================================================
-   MOBILE TABLE → CARDS
+   MOBILE
    ============================================================ */
 
 @media (max-width: 700px) {
@@ -627,6 +783,10 @@
         grid-column: auto;
     }
 
+    .admin-tax-preview {
+        grid-template-columns: 1fr 1fr;
+    }
+
     .admin-products-toolbar {
         align-items: stretch;
         flex-direction: column;
@@ -644,6 +804,7 @@
     .admin-products-table tr {
         display: block;
         width: 100%;
+        min-width: 0;
     }
 
         .admin-products-table thead {
@@ -709,12 +870,11 @@
     }
 }
 
-
 /* ============================================================
    SMALL MOBILE
    ============================================================ */
 
-@media (max-width: 400px) {
+@media (max-width: 420px) {
 
     .admin-products-page {
         padding-left: 10px;
@@ -728,6 +888,10 @@
 
     .admin-product-form-header {
         flex-direction: column;
+    }
+
+    .admin-tax-preview {
+        grid-template-columns: 1fr;
     }
 
     .admin-products-table td {

@@ -493,3 +493,45 @@
         height: 45px;
     }
 }
+/* ============================================================
+   BACK TO ORDER BUTTON
+   ============================================================ */
+
+.payment-back-button {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 12px;
+    padding: 12px 18px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+    .payment-back-button:hover:not(:disabled) {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+    }
+
+    .payment-back-button:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: none;
+    }
+
+    .payment-back-button:focus-visible {
+        outline: 3px solid rgba(37, 99, 235, 0.18);
+        outline-offset: 2px;
+        border-color: #2563eb;
+    }
+
+    .payment-back-button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }

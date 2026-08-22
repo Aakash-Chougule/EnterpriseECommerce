@@ -12,7 +12,7 @@ public class OrderDto
     public Guid UserId { get; set; }
 
     // ========================================================
-    // CUSTOMER DETAILS
+    // CUSTOMER
     // ========================================================
 
     public string CustomerName { get; set; } =
@@ -24,22 +24,63 @@ public class OrderDto
     public string? CustomerPhoneNumber { get; set; }
 
     // ========================================================
-    // ORDER DETAILS
+    // FINANCIAL
     // ========================================================
 
+    public decimal Subtotal { get; set; }
+
+    public decimal TaxableAmount { get; set; }
+
+    public decimal TotalGst { get; set; }
+
+    public decimal TotalCgst { get; set; }
+
+    public decimal TotalSgst { get; set; }
+
+    public decimal TotalIgst { get; set; }
+
+    public decimal ShippingCharge { get; set; }
+
+    public decimal DiscountAmount { get; set; }
+
     public decimal TotalAmount { get; set; }
+
+    // ========================================================
+    // STATUS
+    // ========================================================
 
     public OrderStatus Status { get; set; }
 
     public PaymentStatus PaymentStatus { get; set; }
 
+    // ========================================================
+    // SHIPPING
+    // ========================================================
+
     public string ShippingAddress { get; set; } =
         string.Empty;
+
+    public string ShippingState { get; set; } =
+        string.Empty;
+
+    public string ShippingStateCode { get; set; } =
+        string.Empty;
+
+    public string PostalCode { get; set; } =
+        string.Empty;
+
+    public bool IsInterState { get; set; }
+
+    // ========================================================
+    // DATES
+    // ========================================================
 
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    public List<OrderItemDto> OrderItems { get; set; }
-        = new();
+    public List<OrderItemDto>
+        OrderItems
+    { get; set; } =
+            new();
 }

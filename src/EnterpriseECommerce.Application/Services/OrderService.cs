@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using EnterpriseECommerce.Application.DTOs;
 using EnterpriseECommerce.Application.Events;
 using EnterpriseECommerce.Application.Interfaces;
@@ -9,16 +11,42 @@ namespace EnterpriseECommerce.Application.Services;
 
 /// <summary>
 /// Handles order and checkout-related business logic.
+///
+/// Responsibilities:
+/// - Create orders from the customer's cart
+/// - Validate stock
+/// - Snapshot product pricing and GST
+/// - Calculate shipping
+/// - Calculate GST breakdown
+/// - Reduce stock
+/// - Clear cart
+/// - Retrieve customer/admin orders
+/// - Manage order status
+/// - Restore stock on cancellation
+/// - Publish Kafka order events
 /// </summary>
 public class OrderService
 {
-    private readonly IOrderRepository _orderRepository;
-    private readonly ICartRepository _cartRepository;
-    private readonly IProductRepository _productRepository;
-    private readonly IUserRepository _userRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IKafkaProducer _kafkaProducer;
-    private readonly IConfiguration _configuration;
+    private readonly IOrderRepository
+        _orderRepository;
+
+    private readonly ICartRepository
+        _cartRepository;
+
+    private readonly IProductRepository
+        _productRepository;
+
+    private readonly IUserRepository
+        _userRepository;
+
+    private readonly IUnitOfWork
+        _unitOfWork;
+
+    private readonly IKafkaProducer
+        _kafkaProducer;
+
+    private readonly IConfiguration
+        _configuration;
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -55,25 +83,24 @@ public class OrderService
     // CREATE ORDER / CHECKOUT
     // ============================================================
 
-    public async Task<OrderDto> CreateOrderAsync(
-        Guid userId,
-        CreateOrderRequest request)
+    public async Task<OrderDto>
+        CreateOrderAsync(
+            Guid userId,
+            CreateOrderRequest request)
     {
-        // --------------------------------------------------------
-        // VALIDATION
-        // --------------------------------------------------------
+        // ========================================================
+        // BASIC VALIDATION
+        // ========================================================
 
-        if (userId == Guid.Empty)
+        if (userId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "UserId is required.");
         }
 
-        if (request is null)
-        {
-            throw new ArgumentNullException(
-                nameof(request));
-        }
+        ArgumentNullException.ThrowIfNull(
+            request);
 
         if (string.IsNullOrWhiteSpace(
             request.ShippingAddress))
@@ -83,15 +110,51 @@ public class OrderService
         }
 
         if (string.IsNullOrWhiteSpace(
+            request.ShippingState))
+        {
+            throw new ArgumentException(
+                "Shipping state is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+            request.ShippingStateCode))
+        {
+            throw new ArgumentException(
+                "Shipping state code is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
+            request.PostalCode))
+        {
+            throw new ArgumentException(
+                "PIN code is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(
             request.PaymentMethod))
         {
             throw new ArgumentException(
                 "Payment method is required.");
         }
 
-        // --------------------------------------------------------
-        // PAYMENT METHOD VALIDATION
-        // --------------------------------------------------------
+        // ========================================================
+        // PIN VALIDATION
+        // ========================================================
+
+        var postalCode =
+            request.PostalCode.Trim();
+
+        if (postalCode.Length != 6 ||
+            !postalCode.All(
+                char.IsDigit))
+        {
+            throw new ArgumentException(
+                "A valid 6-digit PIN code is required.");
+        }
+
+        // ========================================================
+        // PAYMENT METHOD
+        // ========================================================
 
         var supportedPaymentMethods =
             new[]
@@ -103,7 +166,8 @@ public class OrderService
             };
 
         var paymentMethod =
-            request.PaymentMethod.Trim();
+            request.PaymentMethod
+                .Trim();
 
         if (!supportedPaymentMethods.Contains(
             paymentMethod,
@@ -113,19 +177,52 @@ public class OrderService
                 "Invalid payment method.");
         }
 
-        // --------------------------------------------------------
-        // KAFKA TOPIC
-        // --------------------------------------------------------
+        // ========================================================
+        // CONFIGURATION
+        // ========================================================
 
-        var topic =
+        var orderEventsTopic =
             _configuration[
                 "Kafka:OrderEventsTopic"]
             ?? throw new InvalidOperationException(
                 "Kafka OrderEventsTopic is not configured.");
 
-        // --------------------------------------------------------
-        // LOAD CUSTOMER
-        // --------------------------------------------------------
+        var sellerStateCode =
+            _configuration[
+                "Commerce:SellerStateCode"];
+
+        if (string.IsNullOrWhiteSpace(
+            sellerStateCode))
+        {
+            throw new InvalidOperationException(
+                "Commerce SellerStateCode is not configured.");
+        }
+
+        var defaultShippingCharge =
+            GetDecimalSetting(
+                "Commerce:DefaultShippingCharge",
+                40m);
+
+        var freeShippingThreshold =
+            GetDecimalSetting(
+                "Commerce:FreeShippingThreshold",
+                500m);
+
+        if (defaultShippingCharge < 0)
+        {
+            throw new InvalidOperationException(
+                "Default shipping charge cannot be negative.");
+        }
+
+        if (freeShippingThreshold < 0)
+        {
+            throw new InvalidOperationException(
+                "Free shipping threshold cannot be negative.");
+        }
+
+        // ========================================================
+        // CUSTOMER
+        // ========================================================
 
         var user =
             await _userRepository
@@ -144,11 +241,12 @@ public class OrderService
                 "Inactive users cannot create orders.");
         }
 
-        Order? order = null;
+        Order? order =
+            null;
 
-        // --------------------------------------------------------
-        // BEGIN TRANSACTION
-        // --------------------------------------------------------
+        // ========================================================
+        // TRANSACTION
+        // ========================================================
 
         await _unitOfWork
             .BeginTransactionAsync();
@@ -177,24 +275,46 @@ public class OrderService
 
             order =
                 new Order(
-                    userId,
-                    request.ShippingAddress.Trim());
+                    userId:
+                        userId,
+
+                    shippingAddress:
+                        request
+                            .ShippingAddress
+                            .Trim(),
+
+                    shippingState:
+                        request
+                            .ShippingState
+                            .Trim(),
+
+                    shippingStateCode:
+                        request
+                            .ShippingStateCode
+                            .Trim(),
+
+                    postalCode:
+                        postalCode,
+
+                    sellerStateCode:
+                        sellerStateCode.Trim());
 
             // ====================================================
             // CART ITEMS -> ORDER ITEMS
             // ====================================================
 
-            foreach (var cartItem in
-                     cart.Items)
+            foreach (
+                var cartItem in
+                cart.Items)
             {
                 var product =
                     await _productRepository
                         .GetByIdAsync(
                             cartItem.ProductId);
 
-                // ------------------------------------------------
+                // ================================================
                 // PRODUCT AVAILABILITY
-                // ------------------------------------------------
+                // ================================================
 
                 if (product is null ||
                     !product.IsActive)
@@ -204,9 +324,9 @@ public class OrderService
                         "is no longer available.");
                 }
 
-                // ------------------------------------------------
-                // STOCK VALIDATION
-                // ------------------------------------------------
+                // ================================================
+                // STOCK
+                // ================================================
 
                 if (cartItem.Quantity >
                     product.StockQuantity)
@@ -220,23 +340,55 @@ public class OrderService
                         $"{cartItem.Quantity}.");
                 }
 
-                // ------------------------------------------------
-                // ORDER ITEM
-                // ------------------------------------------------
+                // ================================================
+                // ORDER ITEM SNAPSHOT
+                // ================================================
+                //
+                // We permanently copy:
+                //
+                // - Product name
+                // - SKU
+                // - HSN
+                // - Quantity
+                // - Price
+                // - GST rate
+                //
+                // Old invoices therefore remain correct even if
+                // product data changes in the future.
+                // ================================================
 
                 var orderItem =
                     new OrderItem(
-                        product.Id,
-                        product.Name,
-                        cartItem.Quantity,
-                        product.Price);
+                        productId:
+                            product.Id,
+
+                        productName:
+                            product.Name,
+
+                        sku:
+                            product.SKU,
+
+                        hsnCode:
+                            product.HsnCode,
+
+                        quantity:
+                            cartItem.Quantity,
+
+                        unitPrice:
+                            product.Price,
+
+                        gstRate:
+                            product.GstRate,
+
+                        isInterState:
+                            order.IsInterState);
 
                 order.AddItem(
                     orderItem);
 
-                // ------------------------------------------------
+                // ================================================
                 // REDUCE INVENTORY
-                // ------------------------------------------------
+                // ================================================
 
                 product.ReduceStock(
                     cartItem.Quantity);
@@ -247,18 +399,41 @@ public class OrderService
             }
 
             // ====================================================
-            // AUTO CONFIRM ORDER
+            // SHIPPING
             // ====================================================
             //
-            // Checkout itself confirms the order.
+            // Current policy:
             //
-            // New orders will therefore start as:
+            // Subtotal >= configured threshold
+            //      -> FREE SHIPPING
             //
-            // Confirmed
+            // Otherwise
+            //      -> configured shipping charge
             //
-            // instead of:
+            // ====================================================
+
+            var shippingCharge =
+                order.Subtotal >=
+                freeShippingThreshold
+                    ? 0m
+                    : defaultShippingCharge;
+
+            order.SetShippingCharge(
+                shippingCharge);
+
+            // ====================================================
+            // DISCOUNT
+            // ====================================================
             //
-            // Pending
+            // Coupon system will be added later.
+            // For now no discount is applied.
+            // ====================================================
+
+            order.SetDiscount(
+                0m);
+
+            // ====================================================
+            // AUTO CONFIRM
             // ====================================================
 
             order.Confirm();
@@ -335,13 +510,11 @@ public class OrderService
                     order.CreatedAt
             };
 
-        // --------------------------------------------------------
-        // PUBLISH AFTER DATABASE COMMIT
-        // --------------------------------------------------------
+        // Kafka is published only after successful DB commit.
 
         await _kafkaProducer
             .PublishAsync(
-                topic,
+                orderEventsTopic,
                 orderCreatedEvent);
 
         return MapToDto(
@@ -356,7 +529,8 @@ public class OrderService
         GetUserOrdersAsync(
             Guid userId)
     {
-        if (userId == Guid.Empty)
+        if (userId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "UserId is required.");
@@ -382,13 +556,15 @@ public class OrderService
             Guid userId,
             Guid orderId)
     {
-        if (userId == Guid.Empty)
+        if (userId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "UserId is required.");
         }
 
-        if (orderId == Guid.Empty)
+        if (orderId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "OrderId is required.");
@@ -400,7 +576,8 @@ public class OrderService
                     orderId);
 
         if (order is null ||
-            order.UserId != userId)
+            order.UserId !=
+            userId)
         {
             return null;
         }
@@ -423,8 +600,9 @@ public class OrderService
         var result =
             new List<OrderDto>();
 
-        foreach (var order in
-                 orders)
+        foreach (
+            var order in
+            orders)
         {
             var user =
                 await _userRepository
@@ -469,11 +647,6 @@ public class OrderService
     // ============================================================
     // ADMIN - CONFIRM ORDER
     // ============================================================
-    //
-    // Kept for older Pending orders.
-    //
-    // New checkout orders are automatically Confirmed.
-    // ============================================================
 
     public async Task<OrderDto>
         ConfirmOrderAsync(
@@ -484,7 +657,8 @@ public class OrderService
                 orderId);
 
         var previousStatus =
-            order.Status.ToString();
+            order.Status
+                .ToString();
 
         order.Confirm();
 
@@ -513,7 +687,8 @@ public class OrderService
                 orderId);
 
         var previousStatus =
-            order.Status.ToString();
+            order.Status
+                .ToString();
 
         order.StartProcessing();
 
@@ -530,7 +705,7 @@ public class OrderService
     }
 
     // ============================================================
-    // ADMIN - SHIP ORDER
+    // ADMIN - SHIP
     // ============================================================
 
     public async Task<OrderDto>
@@ -542,7 +717,8 @@ public class OrderService
                 orderId);
 
         var previousStatus =
-            order.Status.ToString();
+            order.Status
+                .ToString();
 
         order.Ship();
 
@@ -559,7 +735,7 @@ public class OrderService
     }
 
     // ============================================================
-    // ADMIN - DELIVER ORDER
+    // ADMIN - DELIVER
     // ============================================================
 
     public async Task<OrderDto>
@@ -571,7 +747,8 @@ public class OrderService
                 orderId);
 
         var previousStatus =
-            order.Status.ToString();
+            order.Status
+                .ToString();
 
         order.Deliver();
 
@@ -595,7 +772,8 @@ public class OrderService
         CancelOrderAsync(
             Guid orderId)
     {
-        if (orderId == Guid.Empty)
+        if (orderId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "OrderId is required.");
@@ -624,20 +802,22 @@ public class OrderService
             }
 
             previousStatus =
-                order.Status.ToString();
+                order.Status
+                    .ToString();
 
-            // ----------------------------------------------------
-            // CANCEL ORDER
-            // ----------------------------------------------------
+            // ====================================================
+            // CANCEL
+            // ====================================================
 
             order.Cancel();
 
-            // ----------------------------------------------------
+            // ====================================================
             // RESTORE STOCK
-            // ----------------------------------------------------
+            // ====================================================
 
-            foreach (var orderItem in
-                     order.OrderItems)
+            foreach (
+                var orderItem in
+                order.OrderItems)
             {
                 var product =
                     await _productRepository
@@ -683,10 +863,6 @@ public class OrderService
                 "Order cancellation failed.");
         }
 
-        // --------------------------------------------------------
-        // PUBLISH AFTER COMMIT
-        // --------------------------------------------------------
-
         await PublishOrderStatusChangedEventAsync(
             order,
             previousStatus);
@@ -696,7 +872,7 @@ public class OrderService
     }
 
     // ============================================================
-    // PUBLISH ORDER STATUS EVENT
+    // PUBLISH STATUS EVENT
     // ============================================================
 
     private async Task
@@ -751,7 +927,8 @@ public class OrderService
                     previousStatus,
 
                 NewStatus =
-                    order.Status.ToString(),
+                    order.Status
+                        .ToString(),
 
                 TotalAmount =
                     order.TotalAmount,
@@ -771,14 +948,15 @@ public class OrderService
     }
 
     // ============================================================
-    // INTERNAL ORDER LOOKUP
+    // REQUIRED ORDER
     // ============================================================
 
     private async Task<Order>
         GetRequiredOrderAsync(
             Guid orderId)
     {
-        if (orderId == Guid.Empty)
+        if (orderId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "OrderId is required.");
@@ -799,7 +977,38 @@ public class OrderService
     }
 
     // ============================================================
-    // MAPPING
+    // CONFIGURATION DECIMAL
+    // ============================================================
+
+    private decimal GetDecimalSetting(
+        string key,
+        decimal defaultValue)
+    {
+        var value =
+            _configuration[
+                key];
+
+        if (string.IsNullOrWhiteSpace(
+            value))
+        {
+            return defaultValue;
+        }
+
+        if (!decimal.TryParse(
+            value,
+            NumberStyles.Number,
+            CultureInfo.InvariantCulture,
+            out var result))
+        {
+            throw new InvalidOperationException(
+                $"Configuration value '{key}' is invalid.");
+        }
+
+        return result;
+    }
+
+    // ============================================================
+    // ENTITY -> DTO
     // ============================================================
 
     private static OrderDto MapToDto(
@@ -816,8 +1025,40 @@ public class OrderService
             UserId =
                 order.UserId,
 
+            // ====================================================
+            // FINANCIAL
+            // ====================================================
+
+            Subtotal =
+                order.Subtotal,
+
+            TaxableAmount =
+                order.TaxableAmount,
+
+            TotalGst =
+                order.TotalGst,
+
+            TotalCgst =
+                order.TotalCgst,
+
+            TotalSgst =
+                order.TotalSgst,
+
+            TotalIgst =
+                order.TotalIgst,
+
+            ShippingCharge =
+                order.ShippingCharge,
+
+            DiscountAmount =
+                order.DiscountAmount,
+
             TotalAmount =
                 order.TotalAmount,
+
+            // ====================================================
+            // STATUS
+            // ====================================================
 
             Status =
                 order.Status,
@@ -825,14 +1066,38 @@ public class OrderService
             PaymentStatus =
                 order.PaymentStatus,
 
+            // ====================================================
+            // SHIPPING
+            // ====================================================
+
             ShippingAddress =
                 order.ShippingAddress,
+
+            ShippingState =
+                order.ShippingState,
+
+            ShippingStateCode =
+                order.ShippingStateCode,
+
+            PostalCode =
+                order.PostalCode,
+
+            IsInterState =
+                order.IsInterState,
+
+            // ====================================================
+            // DATES
+            // ====================================================
 
             CreatedAt =
                 order.CreatedAt,
 
             UpdatedAt =
                 order.UpdatedAt,
+
+            // ====================================================
+            // ITEMS
+            // ====================================================
 
             OrderItems =
                 order.OrderItems
@@ -849,11 +1114,35 @@ public class OrderService
                                 ProductName =
                                     item.ProductName,
 
+                                SKU =
+                                    item.SKU,
+
+                                HsnCode =
+                                    item.HsnCode,
+
                                 Quantity =
                                     item.Quantity,
 
                                 UnitPrice =
                                     item.UnitPrice,
+
+                                GstRate =
+                                    item.GstRate,
+
+                                TaxableAmount =
+                                    item.TaxableAmount,
+
+                                GstAmount =
+                                    item.GstAmount,
+
+                                CgstAmount =
+                                    item.CgstAmount,
+
+                                SgstAmount =
+                                    item.SgstAmount,
+
+                                IgstAmount =
+                                    item.IgstAmount,
 
                                 TotalPrice =
                                     item.TotalPrice

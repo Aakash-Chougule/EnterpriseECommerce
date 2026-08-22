@@ -8,158 +8,283 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EnterpriseECommerce.API.Controllers;
 
-/// <summary>
-/// Provides endpoints for creating and viewing orders
-/// belonging to the authenticated user.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class OrdersController : ControllerBase
+public class OrdersController :
+    ControllerBase
 {
-    private readonly OrderService _orderService;
+    private readonly OrderService
+        _orderService;
 
-    public OrdersController(OrderService orderService)
+    private readonly CheckoutPricingService
+        _checkoutPricingService;
+
+    public OrdersController(
+        OrderService orderService,
+        CheckoutPricingService checkoutPricingService)
     {
-        _orderService = orderService;
+        _orderService =
+            orderService;
+
+        _checkoutPricingService =
+            checkoutPricingService;
     }
 
-    // ------------------------------------------------------------
-    // POST: api/Orders
-    // ------------------------------------------------------------
-    // Creates an order from the authenticated user's cart.
-    // ------------------------------------------------------------
+    // ============================================================
+    // CHECKOUT PRICE PREVIEW
+    // ============================================================
+    //
+    // POST:
+    //
+    // /api/Orders/checkout-preview
+    //
+    // Does NOT:
+    //
+    // - create an order
+    // - reduce stock
+    // - clear cart
+    // - create payment
+    //
+    // It only calculates pricing.
+    // ============================================================
 
-    [HttpPost]
-    public async Task<ActionResult<OrderDto>> CreateOrder(
-        [FromBody] CreateOrderRequest request)
+    [HttpPost("checkout-preview")]
+    public async Task<
+        ActionResult<CheckoutPreviewDto>>
+        GetCheckoutPreview(
+            [FromBody]
+            CheckoutPreviewRequest request)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized(
+                new
+                {
+                    message =
+                        "User ID was not found in the authentication token."
+                });
         }
 
         try
         {
-            var order = await _orderService.CreateOrderAsync(
-                userId.Value,
-                request);
+            var result =
+                await _checkoutPricingService
+                    .GetPreviewAsync(
+                        userId.Value,
+                        request);
+
+            return Ok(
+                result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+    }
+
+    // ============================================================
+    // CREATE ORDER
+    // ============================================================
+
+    [HttpPost]
+    public async Task<
+        ActionResult<OrderDto>>
+        CreateOrder(
+            [FromBody]
+            CreateOrderRequest request)
+    {
+        var userId =
+            GetUserId();
+
+        if (userId is null)
+        {
+            return Unauthorized(
+                new
+                {
+                    message =
+                        "User ID was not found in the authentication token."
+                });
+        }
+
+        try
+        {
+            var order =
+                await _orderService
+                    .CreateOrderAsync(
+                        userId.Value,
+                        request);
 
             return CreatedAtAction(
-                nameof(GetOrderById),
-                new { id = order.Id },
+                nameof(
+                    GetOrderById),
+                new
+                {
+                    id =
+                        order.Id
+                },
                 order);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        ex.Message
+                });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(
+                new
+                {
+                    message =
+                        ex.Message
+                });
         }
     }
 
-    // ------------------------------------------------------------
-    // GET: api/Orders
-    // ------------------------------------------------------------
-    // Returns all orders belonging to the authenticated user.
-    // ------------------------------------------------------------
+    // ============================================================
+    // GET CURRENT USER ORDERS
+    // ============================================================
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<OrderDto>>> GetOrders()
+    public async Task<
+        ActionResult<IReadOnlyList<OrderDto>>>
+        GetOrders()
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized(
+                new
+                {
+                    message =
+                        "User ID was not found in the authentication token."
+                });
         }
 
-        var orders = await _orderService.GetUserOrdersAsync(
-            userId.Value);
+        var orders =
+            await _orderService
+                .GetUserOrdersAsync(
+                    userId.Value);
 
-        return Ok(orders);
+        return Ok(
+            orders);
     }
 
-    // ------------------------------------------------------------
-    // GET: api/Orders/{id}
-    // ------------------------------------------------------------
-    // Returns one order belonging to the authenticated user.
-    // ------------------------------------------------------------
+    // ============================================================
+    // GET ORDER
+    // ============================================================
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<OrderDto>> GetOrderById(Guid id)
+    public async Task<
+        ActionResult<OrderDto>>
+        GetOrderById(
+            Guid id)
     {
-        var userId = GetUserId();
+        var userId =
+            GetUserId();
 
         if (userId is null)
         {
-            return Unauthorized(new
-            {
-                message =
-                    "User ID was not found in the authentication token."
-            });
+            return Unauthorized(
+                new
+                {
+                    message =
+                        "User ID was not found in the authentication token."
+                });
         }
 
-        if (id == Guid.Empty)
+        if (id ==
+            Guid.Empty)
         {
-            return BadRequest(new
-            {
-                message = "Order ID is required."
-            });
+            return BadRequest(
+                new
+                {
+                    message =
+                        "Order ID is required."
+                });
         }
 
-        var order = await _orderService.GetOrderByIdAsync(
-            userId.Value,
-            id);
+        var order =
+            await _orderService
+                .GetOrderByIdAsync(
+                    userId.Value,
+                    id);
 
         if (order is null)
         {
-            return NotFound(new
-            {
-                message = "Order not found."
-            });
+            return NotFound(
+                new
+                {
+                    message =
+                        "Order not found."
+                });
         }
 
-        return Ok(order);
+        return Ok(
+            order);
     }
 
-    // ------------------------------------------------------------
-    // Extract UserId from JWT
-    // ------------------------------------------------------------
+    // ============================================================
+    // USER ID
+    // ============================================================
 
     private Guid? GetUserId()
     {
         var userIdValue =
-            User.FindFirstValue(ClaimTypes.NameIdentifier);
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrWhiteSpace(userIdValue))
+        if (string.IsNullOrWhiteSpace(
+            userIdValue))
         {
             return null;
         }
 
-        if (!Guid.TryParse(userIdValue, out var userId))
-        {
-            return null;
-        }
-
-        return userId;
+        return Guid.TryParse(
+            userIdValue,
+            out var userId)
+                ? userId
+                : null;
     }
 }

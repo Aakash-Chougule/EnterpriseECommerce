@@ -25,6 +25,13 @@ var builder =
 
 builder.Services.AddControllers();
 
+builder.Services.AddScoped<
+    ReportService>();
+
+builder.Services.AddScoped<CheckoutPricingService>();
+builder.Services.AddScoped<
+    InventoryReportService>();
+
 // ============================================================
 // SWAGGER / OPENAPI
 // ============================================================

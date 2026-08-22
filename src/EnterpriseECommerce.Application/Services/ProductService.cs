@@ -14,6 +14,7 @@ namespace EnterpriseECommerce.Application.Services;
 /// - Create products
 /// - Reactivate inactive products with the same SKU
 /// - Update products
+/// - Manage GST / HSN information
 /// - Increase inventory stock
 /// - Decrease inventory stock
 /// - Soft-deactivate products
@@ -21,12 +22,14 @@ namespace EnterpriseECommerce.Application.Services;
 /// </summary>
 public class ProductService
 {
-    private readonly IProductRepository _productRepository;
+    private readonly IProductRepository
+        _productRepository;
 
     public ProductService(
         IProductRepository productRepository)
     {
-        _productRepository = productRepository;
+        _productRepository =
+            productRepository;
     }
 
     // ============================================================
@@ -41,9 +44,11 @@ public class ProductService
                 .GetAllAsync();
 
         return products
-            .Where(product =>
-                product.IsActive)
-            .Select(MapToDto)
+            .Where(
+                product =>
+                    product.IsActive)
+            .Select(
+                MapToDto)
             .ToList();
     }
 
@@ -55,14 +60,16 @@ public class ProductService
         GetProductByIdAsync(
             Guid id)
     {
-        if (id == Guid.Empty)
+        if (id ==
+            Guid.Empty)
         {
             return null;
         }
 
         var product =
             await _productRepository
-                .GetByIdAsync(id);
+                .GetByIdAsync(
+                    id);
 
         if (product is null ||
             !product.IsActive)
@@ -70,28 +77,24 @@ public class ProductService
             return null;
         }
 
-        return MapToDto(product);
+        return MapToDto(
+            product);
     }
 
     // ============================================================
     // CREATE PRODUCT
     // ============================================================
-    //
-    // New SKU
-    //     → Create product
-    //
-    // Existing active SKU
-    //     → Reject duplicate
-    //
-    // Existing inactive SKU
-    //     → Reactivate existing product
-    // ============================================================
 
-    public async Task<ProductDto> CreateProductAsync(
-        CreateProductRequest request)
+    public async Task<ProductDto>
+        CreateProductAsync(
+            CreateProductRequest request)
     {
         ArgumentNullException.ThrowIfNull(
             request);
+
+        // ========================================================
+        // VALIDATION
+        // ========================================================
 
         if (request.CategoryId ==
             Guid.Empty)
@@ -126,6 +129,13 @@ public class ProductService
                 "Stock quantity cannot be negative.");
         }
 
+        ValidateGstRate(
+            request.GstRate);
+
+        // HSN is allowed to remain blank temporarily.
+        // Existing products migrated from the previous model
+        // will also initially have an empty HSN code.
+
         var normalizedName =
             request.Name.Trim();
 
@@ -134,7 +144,17 @@ public class ProductService
             ?? string.Empty;
 
         var normalizedSku =
-            request.SKU.Trim();
+            request.SKU
+                .Trim()
+                .ToUpperInvariant();
+
+        var normalizedHsn =
+            request.HsnCode?.Trim()
+            ?? string.Empty;
+
+        // ========================================================
+        // CHECK EXISTING SKU
+        // ========================================================
 
         var existingProduct =
             await _productRepository
@@ -143,11 +163,19 @@ public class ProductService
 
         if (existingProduct is not null)
         {
+            // ====================================================
+            // ACTIVE DUPLICATE
+            // ====================================================
+
             if (existingProduct.IsActive)
             {
                 throw new InvalidOperationException(
                     "A product with this SKU already exists.");
             }
+
+            // ====================================================
+            // REACTIVATE PREVIOUS PRODUCT
+            // ====================================================
 
             existingProduct.UpdateCategory(
                 request.CategoryId);
@@ -162,6 +190,10 @@ public class ProductService
             existingProduct.UpdateStock(
                 request.StockQuantity);
 
+            existingProduct.UpdateTaxInformation(
+                normalizedHsn,
+                request.GstRate);
+
             existingProduct.Activate();
 
             await _productRepository
@@ -172,19 +204,42 @@ public class ProductService
                 existingProduct);
         }
 
+        // ========================================================
+        // CREATE NEW PRODUCT
+        // ========================================================
+
         var product =
             new Product(
-                request.CategoryId,
-                normalizedName,
-                normalizedDescription,
-                normalizedSku,
-                request.Price,
-                request.StockQuantity);
+                categoryId:
+                    request.CategoryId,
+
+                name:
+                    normalizedName,
+
+                description:
+                    normalizedDescription,
+
+                sku:
+                    normalizedSku,
+
+                price:
+                    request.Price,
+
+                stockQuantity:
+                    request.StockQuantity,
+
+                hsnCode:
+                    normalizedHsn,
+
+                gstRate:
+                    request.GstRate);
 
         await _productRepository
-            .AddAsync(product);
+            .AddAsync(
+                product);
 
-        return MapToDto(product);
+        return MapToDto(
+            product);
     }
 
     // ============================================================
@@ -199,14 +254,38 @@ public class ProductService
         ArgumentNullException.ThrowIfNull(
             request);
 
-        if (id == Guid.Empty)
+        if (id ==
+            Guid.Empty)
         {
             return null;
         }
 
+        if (string.IsNullOrWhiteSpace(
+            request.Name))
+        {
+            throw new ArgumentException(
+                "Product name is required.");
+        }
+
+        if (request.Price < 0)
+        {
+            throw new ArgumentException(
+                "Price cannot be negative.");
+        }
+
+        if (request.StockQuantity < 0)
+        {
+            throw new ArgumentException(
+                "Stock quantity cannot be negative.");
+        }
+
+        ValidateGstRate(
+            request.GstRate);
+
         var product =
             await _productRepository
-                .GetByIdAsync(id);
+                .GetByIdAsync(
+                    id);
 
         if (product is null ||
             !product.IsActive)
@@ -215,8 +294,9 @@ public class ProductService
         }
 
         product.UpdateDetails(
-            request.Name,
-            request.Description);
+            request.Name.Trim(),
+            request.Description?.Trim()
+            ?? string.Empty);
 
         product.UpdatePrice(
             request.Price);
@@ -224,24 +304,20 @@ public class ProductService
         product.UpdateStock(
             request.StockQuantity);
 
-        await _productRepository
-            .UpdateAsync(product);
+        product.UpdateTaxInformation(
+            request.HsnCode,
+            request.GstRate);
 
-        return MapToDto(product);
+        await _productRepository
+            .UpdateAsync(
+                product);
+
+        return MapToDto(
+            product);
     }
 
     // ============================================================
     // ADMIN - INCREASE STOCK
-    // ============================================================
-    //
-    // Adds inventory to an active product.
-    //
-    // Example:
-    //
-    // Current stock = 10
-    // Quantity      = 5
-    //
-    // New stock     = 15
     // ============================================================
 
     public async Task<ProductDto>
@@ -249,7 +325,8 @@ public class ProductService
             Guid productId,
             int quantity)
     {
-        if (productId == Guid.Empty)
+        if (productId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "ProductId is required.");
@@ -263,7 +340,8 @@ public class ProductService
 
         var product =
             await _productRepository
-                .GetByIdAsync(productId);
+                .GetByIdAsync(
+                    productId);
 
         if (product is null ||
             !product.IsActive)
@@ -276,19 +354,15 @@ public class ProductService
             quantity);
 
         await _productRepository
-            .UpdateAsync(product);
+            .UpdateAsync(
+                product);
 
-        return MapToDto(product);
+        return MapToDto(
+            product);
     }
 
     // ============================================================
     // ADMIN - DECREASE STOCK
-    // ============================================================
-    //
-    // Removes inventory from an active product.
-    //
-    // Product.ReduceStock() prevents stock from becoming
-    // negative.
     // ============================================================
 
     public async Task<ProductDto>
@@ -296,7 +370,8 @@ public class ProductService
             Guid productId,
             int quantity)
     {
-        if (productId == Guid.Empty)
+        if (productId ==
+            Guid.Empty)
         {
             throw new ArgumentException(
                 "ProductId is required.");
@@ -310,7 +385,8 @@ public class ProductService
 
         var product =
             await _productRepository
-                .GetByIdAsync(productId);
+                .GetByIdAsync(
+                    productId);
 
         if (product is null ||
             !product.IsActive)
@@ -319,15 +395,15 @@ public class ProductService
                 "Product not found.");
         }
 
-        // Product domain method checks whether enough
-        // stock is available.
         product.ReduceStock(
             quantity);
 
         await _productRepository
-            .UpdateAsync(product);
+            .UpdateAsync(
+                product);
 
-        return MapToDto(product);
+        return MapToDto(
+            product);
     }
 
     // ============================================================
@@ -338,14 +414,16 @@ public class ProductService
         DeactivateProductAsync(
             Guid id)
     {
-        if (id == Guid.Empty)
+        if (id ==
+            Guid.Empty)
         {
             return false;
         }
 
         var product =
             await _productRepository
-                .GetByIdAsync(id);
+                .GetByIdAsync(
+                    id);
 
         if (product is null ||
             !product.IsActive)
@@ -356,16 +434,14 @@ public class ProductService
         product.Deactivate();
 
         await _productRepository
-            .UpdateAsync(product);
+            .UpdateAsync(
+                product);
 
         return true;
     }
 
     // ============================================================
     // ADMIN - GET ALL PRODUCTS
-    // ============================================================
-    //
-    // Returns active + inactive products.
     // ============================================================
 
     public async Task<IReadOnlyList<ProductDto>>
@@ -376,7 +452,8 @@ public class ProductService
                 .GetAllAsync();
 
         return products
-            .Select(MapToDto)
+            .Select(
+                MapToDto)
             .ToList();
     }
 
@@ -399,17 +476,36 @@ public class ProductService
                 .GetAllAsync();
 
         return products
-            .Where(product =>
-                product.IsActive &&
-                product.StockQuantity <= threshold)
-            .OrderBy(product =>
-                product.StockQuantity)
-            .Select(MapToDto)
+            .Where(
+                product =>
+                    product.IsActive &&
+                    product.StockQuantity <=
+                    threshold)
+            .OrderBy(
+                product =>
+                    product.StockQuantity)
+            .Select(
+                MapToDto)
             .ToList();
     }
 
     // ============================================================
-    // ENTITY → DTO
+    // VALIDATE GST
+    // ============================================================
+
+    private static void ValidateGstRate(
+        decimal gstRate)
+    {
+        if (gstRate < 0 ||
+            gstRate > 100)
+        {
+            throw new ArgumentException(
+                "GST rate must be between 0 and 100.");
+        }
+    }
+
+    // ============================================================
+    // ENTITY -> DTO
     // ============================================================
 
     private static ProductDto MapToDto(
@@ -431,6 +527,12 @@ public class ProductService
 
             SKU =
                 product.SKU,
+
+            HsnCode =
+                product.HsnCode,
+
+            GstRate =
+                product.GstRate,
 
             Price =
                 product.Price,

@@ -6,36 +6,89 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EnterpriseECommerce.Infrastructure.Repositories;
 
-public class PaymentRepository : IPaymentRepository
+public class PaymentRepository :
+    IPaymentRepository
 {
-    private readonly AppDbContext _context;
+    private readonly AppDbContext
+        _context;
 
-    public PaymentRepository(AppDbContext context)
+    public PaymentRepository(
+        AppDbContext context)
     {
-        _context = context;
+        _context =
+            context;
     }
 
-    public async Task<Payment?> GetByIdAsync(Guid id)
+    // ========================================================
+    // GET PAYMENT BY ID
+    // ========================================================
+
+    public async Task<Payment?>
+        GetByIdAsync(
+            Guid id)
     {
-        return await _context.Payments
-            .FirstOrDefaultAsync(payment => payment.Id == id);
+        return await _context
+            .Payments
+            .FirstOrDefaultAsync(
+                payment =>
+                    payment.Id == id);
     }
 
-    public async Task<Payment?> GetByOrderIdAsync(Guid orderId)
+    // ========================================================
+    // GET PAYMENT BY ORDER
+    // ========================================================
+
+    public async Task<Payment?>
+        GetByOrderIdAsync(
+            Guid orderId)
     {
-        return await _context.Payments
-            .FirstOrDefaultAsync(payment => payment.OrderId == orderId);
+        return await _context
+            .Payments
+            .FirstOrDefaultAsync(
+                payment =>
+                    payment.OrderId ==
+                    orderId);
     }
 
-    public async Task AddAsync(Payment payment)
-    {
-        await _context.Payments.AddAsync(payment);
+    // ========================================================
+    // ADMIN / REPORTING
+    // ========================================================
 
-        await _context.SaveChangesAsync();
+    public async Task<IEnumerable<Payment>>
+        GetAllAsync()
+    {
+        return await _context
+            .Payments
+            .OrderByDescending(
+                payment =>
+                    payment.CreatedAt)
+            .ToListAsync();
     }
 
-    public async Task UpdateAsync(Payment payment)
+    // ========================================================
+    // ADD
+    // ========================================================
+
+    public async Task AddAsync(
+        Payment payment)
     {
-        await _context.SaveChangesAsync();
+        await _context
+            .Payments
+            .AddAsync(
+                payment);
+
+        await _context
+            .SaveChangesAsync();
+    }
+
+    // ========================================================
+    // UPDATE
+    // ========================================================
+
+    public async Task UpdateAsync(
+        Payment payment)
+    {
+        await _context
+            .SaveChangesAsync();
     }
 }

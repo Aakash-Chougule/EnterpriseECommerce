@@ -1,55 +1,103 @@
 using EnterpriseECommerce.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace EnterpriseECommerce.Infrastructure.Persistence.Configurations;
 
-/// <summary>
-/// Defines the database mapping and constraints for products.
-/// </summary>
-public class ProductConfiguration : IEntityTypeConfiguration<Product>
+public class ProductConfiguration :
+    IEntityTypeConfiguration<Product>
 {
-    public void Configure(EntityTypeBuilder<Product> builder)
+    public void Configure(
+        EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("Products");
+        builder.ToTable(
+            "Products");
 
-        builder.HasKey(product => product.Id);
+        builder.HasKey(
+            product =>
+                product.Id);
 
-        builder.Property(product => product.Name)
+        builder.Property(
+                product =>
+                    product.Name)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(
+                200);
 
-        builder.Property(product => product.Description)
-            .HasMaxLength(2000);
+        builder.Property(
+                product =>
+                    product.Description)
+            .HasMaxLength(
+                2000);
 
-        builder.Property(product => product.SKU)
+        builder.Property(
+                product =>
+                    product.SKU)
             .IsRequired()
-            .HasMaxLength(50);
+            .HasMaxLength(
+                50);
 
-        // Explicit precision prevents floating-point issues
-        // when storing monetary values.
-        builder.Property(product => product.Price)
-            .HasPrecision(18, 2)
+        // ====================================================
+        // GST
+        // ====================================================
+
+        builder.Property(
+                product =>
+                    product.HsnCode)
+            .HasMaxLength(
+                20)
+            .HasDefaultValue(
+                string.Empty);
+
+        builder.Property(
+                product =>
+                    product.GstRate)
+            .HasPrecision(
+                5,
+                2)
+            .HasDefaultValue(
+                0m)
             .IsRequired();
 
-        builder.Property(product => product.StockQuantity)
+        // ====================================================
+        // MONEY
+        // ====================================================
+
+        builder.Property(
+                product =>
+                    product.Price)
+            .HasPrecision(
+                18,
+                2)
             .IsRequired();
 
-        builder.Property(product => product.IsActive)
+        builder.Property(
+                product =>
+                    product.StockQuantity)
             .IsRequired();
 
-        builder.Property(product => product.CreatedAt)
+        builder.Property(
+                product =>
+                    product.IsActive)
             .IsRequired();
 
-        // SKU should uniquely identify a product.
-        builder.HasIndex(product => product.SKU)
+        builder.Property(
+                product =>
+                    product.CreatedAt)
+            .IsRequired();
+
+        builder.HasIndex(
+                product =>
+                    product.SKU)
             .IsUnique();
 
-        // A Product belongs to one Category.
-        // A Category can contain many Products.
         builder.HasOne<Category>()
             .WithMany()
-            .HasForeignKey(product => product.CategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(
+                product =>
+                    product.CategoryId)
+            .OnDelete(
+                DeleteBehavior.Restrict);
     }
 }

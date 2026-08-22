@@ -4,14 +4,27 @@ namespace EnterpriseECommerce.Application.Interfaces;
 
 public interface IOrderRepository
 {
-    Task<Order?> GetByIdAsync(Guid id);
+    Task<Order?> GetByIdAsync(
+        Guid id);
 
-    Task<IEnumerable<Order>> GetByUserIdAsync(Guid userId);
+    Task<IEnumerable<Order>>
+        GetByUserIdAsync(
+            Guid userId);
 
-    // Admin: retrieve all orders.
-    Task<IEnumerable<Order>> GetAllAsync();
+    // ========================================================
+    // ADMIN / REPORTING
+    // ========================================================
 
-    Task AddAsync(Order order);
+    Task<IEnumerable<Order>>
+        GetAllAsync();
 
-    Task UpdateAsync(Order order);
+    // ========================================================
+    // COMMANDS
+    // ========================================================
+
+    Task AddAsync(
+        Order order);
+
+    Task UpdateAsync(
+        Order order);
 }

@@ -1,24 +1,45 @@
+using EnterpriseECommerce.Application.DTOs;
 using EnterpriseECommerce.Domain.Entities;
 
 namespace EnterpriseECommerce.Application.Interfaces;
 
 /// <summary>
-/// Defines the operations required to access product data.
-///
-/// The Application layer depends on this abstraction rather than
-/// directly depending on Entity Framework Core.
+/// Defines product repository operations.
 /// </summary>
 public interface IProductRepository
 {
-    Task<Product?> GetByIdAsync(Guid id);
+    // ========================================================
+    // STANDARD PRODUCT OPERATIONS
+    // ========================================================
 
-    Task<Product?> GetBySkuAsync(string sku);
+    Task<Product?> GetByIdAsync(
+        Guid id);
 
-    Task<IReadOnlyList<Product>> GetAllAsync();
+    Task<Product?> GetBySkuAsync(
+        string sku);
 
-    Task AddAsync(Product product);
+    Task<IReadOnlyList<Product>>
+        GetAllAsync();
 
-    Task UpdateAsync(Product product);
+    Task AddAsync(
+        Product product);
 
-    Task DeleteAsync(Product product);
+    Task UpdateAsync(
+        Product product);
+
+    Task DeleteAsync(
+        Product product);
+
+    // ========================================================
+    // INVENTORY REPORTING
+    // ========================================================
+    //
+    // Returns product information together with its category.
+    //
+    // StockStatus and StockValue will be calculated by the
+    // application service.
+    // ========================================================
+
+    Task<IReadOnlyList<InventoryReportItemDto>>
+        GetInventoryReportItemsAsync();
 }

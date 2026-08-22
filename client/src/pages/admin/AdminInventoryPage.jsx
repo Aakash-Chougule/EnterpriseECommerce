@@ -15,6 +15,13 @@ import {
     getCategories
 } from '../../services/categoryService'
 
+import {
+    exportInventoryCsv,
+    exportInventoryExcel,
+    exportInventoryPdf,
+    getInventoryReport
+} from '../../services/inventoryReportService'
+
 import './AdminInventoryPage.css'
 
 // ============================================================
@@ -34,6 +41,11 @@ function AdminInventoryPage() {
         setLowStockProducts
     ] = useState([])
 
+    const [
+        inventoryReport,
+        setInventoryReport
+    ] = useState(null)
+
     const [threshold, setThreshold] =
         useState(5)
 
@@ -43,6 +55,21 @@ function AdminInventoryPage() {
     const [
         stockFilter,
         setStockFilter
+    ] = useState('all')
+
+    const [
+        reportSearch,
+        setReportSearch
+    ] = useState('')
+
+    const [
+        reportCategory,
+        setReportCategory
+    ] = useState('all')
+
+    const [
+        reportStockFilter,
+        setReportStockFilter
     ] = useState('all')
 
     const [
@@ -58,6 +85,9 @@ function AdminInventoryPage() {
     const [loading, setLoading] =
         useState(true)
 
+    const [exporting, setExporting] =
+        useState('')
+
     const [error, setError] =
         useState('')
 
@@ -65,85 +95,109 @@ function AdminInventoryPage() {
         useState('')
 
     // ========================================================
-    // LOAD INVENTORY
+    // LOAD
     // ========================================================
 
-    const loadInventory = async () => {
+    const loadInventory =
+        async () => {
 
-        try {
+            try {
 
-            setLoading(true)
-            setError('')
-
-            const [
-                productData,
-                categoryData,
-                lowStockData
-            ] = await Promise.all([
-                getProducts(),
-                getCategories(),
-                getLowStockProducts(
-                    threshold
+                setLoading(
+                    true
                 )
-            ])
 
-            setProducts(
-                Array.isArray(productData)
-                    ? productData
-                    : []
-            )
+                setError('')
 
-            setCategories(
-                Array.isArray(categoryData)
-                    ? categoryData
-                    : []
-            )
+                const [
+                    productData,
+                    categoryData,
+                    lowStockData,
+                    reportData
+                ] =
+                    await Promise.all([
+                        getProducts(),
 
-            setLowStockProducts(
-                Array.isArray(lowStockData)
-                    ? lowStockData
-                    : []
-            )
+                        getCategories(),
+
+                        getLowStockProducts(
+                            threshold
+                        ),
+
+                        getInventoryReport(
+                            threshold
+                        )
+                    ])
+
+                setProducts(
+                    Array.isArray(
+                        productData
+                    )
+                        ? productData
+                        : []
+                )
+
+                setCategories(
+                    Array.isArray(
+                        categoryData
+                    )
+                        ? categoryData
+                        : []
+                )
+
+                setLowStockProducts(
+                    Array.isArray(
+                        lowStockData
+                    )
+                        ? lowStockData
+                        : []
+                )
+
+                setInventoryReport(
+                    reportData
+                )
+            }
+            catch (err) {
+
+                console.error(
+                    'Failed to load inventory:',
+                    err
+                )
+
+                setError(
+                    err.response?.data?.message ||
+                    'Unable to load inventory.'
+                )
+            }
+            finally {
+
+                setLoading(
+                    false
+                )
+            }
         }
-        catch (err) {
 
-            console.error(
-                'Failed to load inventory:',
-                err
-            )
+    useEffect(
+        () => {
 
-            setError(
-                err.response?.data?.message ||
-                'Unable to load inventory.'
-            )
-        }
-        finally {
+            loadInventory()
 
-            setLoading(false)
-        }
-    }
+        },
+        [threshold]
+    )
 
     // ========================================================
-    // INITIAL LOAD / THRESHOLD CHANGE
-    // ========================================================
-
-    useEffect(() => {
-
-        loadInventory()
-
-    }, [threshold])
-
-    // ========================================================
-    // CATEGORY NAME
+    // CATEGORY
     // ========================================================
 
     const getCategoryName =
-        (categoryId) => {
+        categoryId => {
 
             const category =
                 categories.find(
                     item =>
-                        item.id === categoryId
+                        item.id ===
+                        categoryId
                 )
 
             return (
@@ -159,13 +213,15 @@ function AdminInventoryPage() {
     const outOfStockCount =
         products.filter(
             product =>
-                product.stockQuantity === 0
+                product.stockQuantity ===
+                0
         ).length
 
     const lowStockCount =
         lowStockProducts.filter(
             product =>
-                product.stockQuantity > 0
+                product.stockQuantity >
+                0
         ).length
 
     const inStockCount =
@@ -177,22 +233,49 @@ function AdminInventoryPage() {
 
     const totalStock =
         products.reduce(
-            (total, product) =>
+            (
+                total,
+                product
+            ) =>
                 total +
                 Number(
-                    product.stockQuantity ?? 0
+                    product.stockQuantity ??
+                    0
                 ),
             0
         )
+
+    // ========================================================
+    // FORMAT MONEY
+    // ========================================================
+
+    const formatMoney =
+        value =>
+            Number(
+                value ?? 0
+            ).toLocaleString(
+                'en-IN',
+                {
+                    minimumFractionDigits:
+                        2,
+
+                    maximumFractionDigits:
+                        2
+                }
+            )
 
     // ========================================================
     // STOCK STATUS
     // ========================================================
 
     const getStockStatus =
-        (stockQuantity) => {
+        stockQuantity => {
 
-            if (stockQuantity === 0) {
+            if (
+                stockQuantity ===
+                0
+            ) {
+
                 return 'Out of Stock'
             }
 
@@ -200,6 +283,7 @@ function AdminInventoryPage() {
                 stockQuantity <=
                 threshold
             ) {
+
                 return 'Low Stock'
             }
 
@@ -207,9 +291,13 @@ function AdminInventoryPage() {
         }
 
     const getStockStatusClass =
-        (stockQuantity) => {
+        stockQuantity => {
 
-            if (stockQuantity === 0) {
+            if (
+                stockQuantity ===
+                0
+            ) {
+
                 return 'out'
             }
 
@@ -217,6 +305,7 @@ function AdminInventoryPage() {
                 stockQuantity <=
                 threshold
             ) {
+
                 return 'low'
             }
 
@@ -224,89 +313,183 @@ function AdminInventoryPage() {
         }
 
     // ========================================================
-    // SEARCH + FILTER
+    // MANAGEMENT FILTER
     // ========================================================
 
     const filteredProducts =
-        useMemo(() => {
+        useMemo(
+            () => {
 
-            const normalizedSearch =
-                search
-                    .trim()
-                    .toLowerCase()
+                const normalizedSearch =
+                    search
+                        .trim()
+                        .toLowerCase()
 
-            return products.filter(
-                product => {
+                return products.filter(
+                    product => {
 
-                    const categoryName =
-                        getCategoryName(
-                            product.categoryId
+                        const categoryName =
+                            getCategoryName(
+                                product.categoryId
+                            )
+
+                        const searchableText =
+                            `
+                            ${product.name ?? ''}
+                            ${product.sku ?? ''}
+                            ${product.description ?? ''}
+                            ${categoryName}
+                            ${product.stockQuantity ?? ''}
+                            `
+                                .toLowerCase()
+
+                        const matchesSearch =
+                            !normalizedSearch ||
+                            searchableText.includes(
+                                normalizedSearch
+                            )
+
+                        let matchesFilter =
+                            true
+
+                        if (
+                            stockFilter ===
+                            'in-stock'
+                        ) {
+
+                            matchesFilter =
+                                product.stockQuantity >
+                                threshold
+                        }
+
+                        if (
+                            stockFilter ===
+                            'low-stock'
+                        ) {
+
+                            matchesFilter =
+                                product.stockQuantity >
+                                0 &&
+                                product.stockQuantity <=
+                                threshold
+                        }
+
+                        if (
+                            stockFilter ===
+                            'out-of-stock'
+                        ) {
+
+                            matchesFilter =
+                                product.stockQuantity ===
+                                0
+                        }
+
+                        return (
+                            matchesSearch &&
+                            matchesFilter
                         )
-
-                    const searchableText = `
-                        ${product.name ?? ''}
-                        ${product.sku ?? ''}
-                        ${product.description ?? ''}
-                        ${categoryName}
-                        ${product.stockQuantity ?? ''}
-                    `.toLowerCase()
-
-                    const matchesSearch =
-                        !normalizedSearch ||
-                        searchableText.includes(
-                            normalizedSearch
-                        )
-
-                    let matchesFilter = true
-
-                    if (
-                        stockFilter ===
-                        'in-stock'
-                    ) {
-                        matchesFilter =
-                            product.stockQuantity >
-                            threshold
                     }
-
-                    if (
-                        stockFilter ===
-                        'low-stock'
-                    ) {
-                        matchesFilter =
-                            product.stockQuantity > 0 &&
-                            product.stockQuantity <=
-                            threshold
-                    }
-
-                    if (
-                        stockFilter ===
-                        'out-of-stock'
-                    ) {
-                        matchesFilter =
-                            product.stockQuantity === 0
-                    }
-
-                    return (
-                        matchesSearch &&
-                        matchesFilter
-                    )
-                }
-            )
-
-        }, [
-            products,
-            categories,
-            search,
-            stockFilter,
-            threshold
-        ])
+                )
+            },
+            [
+                products,
+                categories,
+                search,
+                stockFilter,
+                threshold
+            ]
+        )
 
     // ========================================================
-    // ADJUSTMENT QUANTITY
+    // REPORT FILTER
+    // ========================================================
+
+    const filteredReportProducts =
+        useMemo(
+            () => {
+
+                const rows =
+                    inventoryReport
+                        ?.products ??
+                    []
+
+                const normalized =
+                    reportSearch
+                        .trim()
+                        .toLowerCase()
+
+                return rows.filter(
+                    product => {
+
+                        const searchable =
+                            `
+                            ${product.productName}
+                            ${product.sku}
+                            ${product.categoryName}
+                            ${product.stockStatus}
+                            `
+                                .toLowerCase()
+
+                        const matchesSearch =
+                            !normalized ||
+                            searchable.includes(
+                                normalized
+                            )
+
+                        const matchesCategory =
+                            reportCategory ===
+                            'all' ||
+                            product.categoryId ===
+                            reportCategory
+
+                        const status =
+                            product.stockStatus
+                                ?.toLowerCase()
+
+                        const matchesStock =
+                            reportStockFilter ===
+                            'all' ||
+                            (
+                                reportStockFilter ===
+                                'in-stock' &&
+                                status ===
+                                'in stock'
+                            ) ||
+                            (
+                                reportStockFilter ===
+                                'low-stock' &&
+                                status ===
+                                'low stock'
+                            ) ||
+                            (
+                                reportStockFilter ===
+                                'out-of-stock' &&
+                                status ===
+                                'out of stock'
+                            )
+
+                        return (
+                            matchesSearch &&
+                            matchesCategory &&
+                            matchesStock
+                        )
+                    }
+                )
+            },
+            [
+                inventoryReport,
+                reportSearch,
+                reportCategory,
+                reportStockFilter
+            ]
+        )
+
+    // ========================================================
+    // ADJUSTMENT
     // ========================================================
 
     const getAdjustmentQuantity =
-        (productId) => {
+        productId => {
 
             return (
                 adjustmentQuantities[
@@ -321,25 +504,24 @@ function AdminInventoryPage() {
             value
         ) => {
 
-            const quantity =
-                Number(value)
-
             setAdjustmentQuantities(
                 current => ({
                     ...current,
 
                     [productId]:
-                        quantity
+                        Number(
+                            value
+                        )
                 })
             )
         }
 
     // ========================================================
-    // INCREASE STOCK
+    // INCREASE
     // ========================================================
 
     const handleIncreaseStock =
-        async (product) => {
+        async product => {
 
             const quantity =
                 getAdjustmentQuantity(
@@ -347,9 +529,12 @@ function AdminInventoryPage() {
                 )
 
             if (
-                !Number.isInteger(quantity) ||
+                !Number.isInteger(
+                    quantity
+                ) ||
                 quantity <= 0
             ) {
+
                 setError(
                     'Quantity must be a positive whole number.'
                 )
@@ -379,11 +564,6 @@ function AdminInventoryPage() {
             }
             catch (err) {
 
-                console.error(
-                    'Failed to increase stock:',
-                    err
-                )
-
                 setError(
                     err.response?.data?.message ||
                     'Unable to increase stock.'
@@ -398,11 +578,11 @@ function AdminInventoryPage() {
         }
 
     // ========================================================
-    // DECREASE STOCK
+    // DECREASE
     // ========================================================
 
     const handleDecreaseStock =
-        async (product) => {
+        async product => {
 
             const quantity =
                 getAdjustmentQuantity(
@@ -410,9 +590,12 @@ function AdminInventoryPage() {
                 )
 
             if (
-                !Number.isInteger(quantity) ||
+                !Number.isInteger(
+                    quantity
+                ) ||
                 quantity <= 0
             ) {
+
                 setError(
                     'Quantity must be a positive whole number.'
                 )
@@ -442,11 +625,6 @@ function AdminInventoryPage() {
             }
             catch (err) {
 
-                console.error(
-                    'Failed to decrease stock:',
-                    err
-                )
-
                 setError(
                     err.response?.data?.message ||
                     'Unable to decrease stock.'
@@ -457,6 +635,69 @@ function AdminInventoryPage() {
                 setProcessingProductId(
                     null
                 )
+            }
+        }
+
+    // ========================================================
+    // EXPORT
+    // ========================================================
+
+    const handleExport =
+        async type => {
+
+            try {
+
+                setExporting(
+                    type
+                )
+
+                setError('')
+
+                if (
+                    type ===
+                    'excel'
+                ) {
+
+                    await exportInventoryExcel(
+                        threshold
+                    )
+                }
+
+                if (
+                    type ===
+                    'csv'
+                ) {
+
+                    await exportInventoryCsv(
+                        threshold
+                    )
+                }
+
+                if (
+                    type ===
+                    'pdf'
+                ) {
+
+                    await exportInventoryPdf(
+                        threshold
+                    )
+                }
+            }
+            catch (err) {
+
+                console.error(
+                    'Inventory export failed:',
+                    err
+                )
+
+                setError(
+                    err.response?.data?.message ||
+                    'Unable to export inventory report.'
+                )
+            }
+            finally {
+
+                setExporting('')
             }
         }
 
@@ -515,9 +756,9 @@ function AdminInventoryPage() {
                         </h1>
 
                         <p>
-                            Monitor product stock,
-                            identify low-stock items and
-                            adjust inventory quantities.
+                            Monitor stock, manage quantities
+                            and review product-wise inventory
+                            reports by category.
                         </p>
 
                     </div>
@@ -536,20 +777,11 @@ function AdminInventoryPage() {
 
                 </header>
 
-                {/* ==============================================
-                    ALERTS
-                   ============================================== */}
-
                 {error && (
 
                     <div className="admin-inventory-alert error">
-
-                        <span>
-                            !
-                        </span>
-
+                        <span>!</span>
                         {error}
-
                     </div>
 
                 )}
@@ -557,13 +789,8 @@ function AdminInventoryPage() {
                 {message && (
 
                     <div className="admin-inventory-alert success">
-
-                        <span>
-                            ✓
-                        </span>
-
+                        <span>✓</span>
                         {message}
-
                     </div>
 
                 )}
@@ -574,90 +801,76 @@ function AdminInventoryPage() {
 
                 <section className="inventory-summary-grid">
 
-                    <article className="inventory-summary-card">
+                    <InventorySummaryCard
+                        label="Active Products"
+                        value={
+                            inventoryReport
+                                ?.activeProducts ??
+                            products.length
+                        }
+                        description="Products currently available"
+                    />
 
-                        <span>
-                            Active Products
-                        </span>
+                    <InventorySummaryCard
+                        className="stock"
+                        label="In Stock"
+                        value={
+                            inventoryReport
+                                ?.inStockProducts ??
+                            inStockCount
+                        }
+                        description="Above low-stock threshold"
+                    />
 
-                        <strong>
-                            {products.length}
-                        </strong>
+                    <InventorySummaryCard
+                        className="warning"
+                        label="Low Stock"
+                        value={
+                            inventoryReport
+                                ?.lowStockProducts ??
+                            lowStockCount
+                        }
+                        description="Needs attention soon"
+                    />
 
-                        <small>
-                            Products currently available
-                        </small>
+                    <InventorySummaryCard
+                        className="danger"
+                        label="Out of Stock"
+                        value={
+                            inventoryReport
+                                ?.outOfStockProducts ??
+                            outOfStockCount
+                        }
+                        description="Requires restocking"
+                    />
 
-                    </article>
+                    <InventorySummaryCard
+                        className="units"
+                        label="Total Units"
+                        value={
+                            inventoryReport
+                                ?.totalUnits ??
+                            totalStock
+                        }
+                        description="Units across inventory"
+                    />
 
-                    <article className="inventory-summary-card stock">
-
-                        <span>
-                            In Stock
-                        </span>
-
-                        <strong>
-                            {inStockCount}
-                        </strong>
-
-                        <small>
-                            Above low-stock threshold
-                        </small>
-
-                    </article>
-
-                    <article className="inventory-summary-card warning">
-
-                        <span>
-                            Low Stock
-                        </span>
-
-                        <strong>
-                            {lowStockCount}
-                        </strong>
-
-                        <small>
-                            Needs attention soon
-                        </small>
-
-                    </article>
-
-                    <article className="inventory-summary-card danger">
-
-                        <span>
-                            Out of Stock
-                        </span>
-
-                        <strong>
-                            {outOfStockCount}
-                        </strong>
-
-                        <small>
-                            Requires restocking
-                        </small>
-
-                    </article>
-
-                    <article className="inventory-summary-card units">
-
-                        <span>
-                            Total Units
-                        </span>
-
-                        <strong>
-                            {totalStock}
-                        </strong>
-
-                        <small>
-                            Units across inventory
-                        </small>
-
-                    </article>
+                    <InventorySummaryCard
+                        className="value"
+                        label="Inventory Value"
+                        value={
+                            `₹${formatMoney(
+                                inventoryReport
+                                    ?.totalInventoryValue
+                            )}`
+                        }
+                        description="Current stock valuation"
+                    />
 
                 </section>
 
                 {/* ==============================================
-                    LOW STOCK SETTING
+                    LOW STOCK THRESHOLD
                    ============================================== */}
 
                 <section className="inventory-settings-card">
@@ -674,8 +887,8 @@ function AdminInventoryPage() {
 
                         <p>
                             Products with stock less than
-                            or equal to the selected value
-                            will be marked as low stock.
+                            or equal to this value are
+                            marked as low stock.
                         </p>
 
                     </div>
@@ -691,21 +904,19 @@ function AdminInventoryPage() {
                             type="number"
                             min="0"
                             step="1"
-                            value={threshold}
+                            value={
+                                threshold
+                            }
                             onChange={
-                                event => {
-
-                                    const value =
-                                        Number(
-                                            event.target.value
-                                        )
-
+                                event =>
                                     setThreshold(
-                                        value >= 0
-                                            ? value
-                                            : 0
+                                        Math.max(
+                                            0,
+                                            Number(
+                                                event.target.value
+                                            )
+                                        )
                                     )
-                                }
                             }
                         />
 
@@ -718,7 +929,473 @@ function AdminInventoryPage() {
                 </section>
 
                 {/* ==============================================
-                    INVENTORY TABLE
+                    CATEGORY SUMMARY
+                   ============================================== */}
+
+                <section className="inventory-report-card">
+
+                    <div className="inventory-report-heading">
+
+                        <div>
+
+                            <span>
+                                Inventory Report
+                            </span>
+
+                            <h2>
+                                Category Summary
+                            </h2>
+
+                            <p>
+                                Inventory totals grouped by
+                                product category.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="inventory-report-table-wrapper">
+
+                        <table className="inventory-report-table">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Category
+                                    </th>
+
+                                    <th>
+                                        Products
+                                    </th>
+
+                                    <th>
+                                        Units
+                                    </th>
+
+                                    <th>
+                                        Inventory Value
+                                    </th>
+
+                                    <th>
+                                        In Stock
+                                    </th>
+
+                                    <th>
+                                        Low Stock
+                                    </th>
+
+                                    <th>
+                                        Out of Stock
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {
+                                    inventoryReport
+                                        ?.categories
+                                        ?.map(
+                                            category => (
+
+                                                <tr
+                                                    key={
+                                                        category.categoryId
+                                                    }
+                                                >
+
+                                                    <td>
+                                                        <strong>
+                                                            {category.categoryName}
+                                                        </strong>
+                                                    </td>
+
+                                                    <td>
+                                                        {category.productCount}
+                                                    </td>
+
+                                                    <td>
+                                                        {category.totalUnits}
+                                                    </td>
+
+                                                    <td>
+                                                        ₹{formatMoney(
+                                                            category.inventoryValue
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {category.inStockProducts}
+                                                    </td>
+
+                                                    <td>
+                                                        {category.lowStockProducts}
+                                                    </td>
+
+                                                    <td>
+                                                        {category.outOfStockProducts}
+                                                    </td>
+
+                                                </tr>
+
+                                            )
+                                        )
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </section>
+
+                {/* ==============================================
+                    PRODUCT-WISE INVENTORY REPORT
+                   ============================================== */}
+
+                <section className="inventory-report-card">
+
+                    <div className="inventory-report-heading">
+
+                        <div>
+
+                            <span>
+                                Detailed Report
+                            </span>
+
+                            <h2>
+                                Product-wise Inventory Report
+                            </h2>
+
+                            <p>
+                                View each product with its
+                                category, stock and valuation.
+                            </p>
+
+                        </div>
+
+                        <div className="inventory-export-buttons">
+
+                            <button
+                                type="button"
+                                className="inventory-export-button excel"
+                                disabled={
+                                    Boolean(
+                                        exporting
+                                    )
+                                }
+                                onClick={() =>
+                                    handleExport(
+                                        'excel'
+                                    )
+                                }
+                            >
+                                {
+                                    exporting ===
+                                        'excel'
+                                        ? 'Exporting...'
+                                        : 'Excel'
+                                }
+                            </button>
+
+                            <button
+                                type="button"
+                                className="inventory-export-button csv"
+                                disabled={
+                                    Boolean(
+                                        exporting
+                                    )
+                                }
+                                onClick={() =>
+                                    handleExport(
+                                        'csv'
+                                    )
+                                }
+                            >
+                                {
+                                    exporting ===
+                                        'csv'
+                                        ? 'Exporting...'
+                                        : 'CSV'
+                                }
+                            </button>
+
+                            <button
+                                type="button"
+                                className="inventory-export-button pdf"
+                                disabled={
+                                    Boolean(
+                                        exporting
+                                    )
+                                }
+                                onClick={() =>
+                                    handleExport(
+                                        'pdf'
+                                    )
+                                }
+                            >
+                                {
+                                    exporting ===
+                                        'pdf'
+                                        ? 'Exporting...'
+                                        : 'PDF'
+                                }
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    {/* REPORT FILTER */}
+
+                    <div className="inventory-report-toolbar">
+
+                        <input
+                            type="search"
+                            placeholder="Search product, SKU, category..."
+                            value={
+                                reportSearch
+                            }
+                            onChange={
+                                event =>
+                                    setReportSearch(
+                                        event.target.value
+                                    )
+                            }
+                        />
+
+                        <select
+                            value={
+                                reportCategory
+                            }
+                            onChange={
+                                event =>
+                                    setReportCategory(
+                                        event.target.value
+                                    )
+                            }
+                        >
+
+                            <option value="all">
+                                All Categories
+                            </option>
+
+                            {
+                                inventoryReport
+                                    ?.categories
+                                    ?.map(
+                                        category => (
+
+                                            <option
+                                                key={
+                                                    category.categoryId
+                                                }
+                                                value={
+                                                    category.categoryId
+                                                }
+                                            >
+                                                {category.categoryName}
+                                            </option>
+
+                                        )
+                                    )
+                            }
+
+                        </select>
+
+                        <select
+                            value={
+                                reportStockFilter
+                            }
+                            onChange={
+                                event =>
+                                    setReportStockFilter(
+                                        event.target.value
+                                    )
+                            }
+                        >
+
+                            <option value="all">
+                                All Stock
+                            </option>
+
+                            <option value="in-stock">
+                                In Stock
+                            </option>
+
+                            <option value="low-stock">
+                                Low Stock
+                            </option>
+
+                            <option value="out-of-stock">
+                                Out of Stock
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <div className="inventory-report-table-wrapper">
+
+                        <table className="inventory-report-table product-report">
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>Product</th>
+
+                                    <th>SKU</th>
+
+                                    <th>Category</th>
+
+                                    <th>Unit Price</th>
+
+                                    <th>Current Stock</th>
+
+                                    <th>Stock Value</th>
+
+                                    <th>Stock Status</th>
+
+                                    <th>Product Status</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {
+                                    filteredReportProducts
+                                        .length ===
+                                        0
+                                        ? (
+
+                                            <tr>
+
+                                                <td
+                                                    colSpan="8"
+                                                    className="inventory-report-empty"
+                                                >
+                                                    No inventory records found.
+                                                </td>
+
+                                            </tr>
+
+                                        )
+                                        : filteredReportProducts
+                                            .map(
+                                                product => (
+
+                                                    <tr
+                                                        key={
+                                                            product.productId
+                                                        }
+                                                    >
+
+                                                        <td>
+
+                                                            <strong>
+                                                                {product.productName}
+                                                            </strong>
+
+                                                        </td>
+
+                                                        <td>
+
+                                                            <span className="inventory-sku">
+                                                                {product.sku}
+                                                            </span>
+
+                                                        </td>
+
+                                                        <td>
+                                                            {product.categoryName}
+                                                        </td>
+
+                                                        <td>
+                                                            ₹{formatMoney(
+                                                                product.unitPrice
+                                                            )}
+                                                        </td>
+
+                                                        <td>
+
+                                                            <strong className="inventory-stock-number">
+                                                                {product.stockQuantity}
+                                                            </strong>
+
+                                                        </td>
+
+                                                        <td>
+
+                                                            <strong>
+                                                                ₹{formatMoney(
+                                                                    product.stockValue
+                                                                )}
+                                                            </strong>
+
+                                                        </td>
+
+                                                        <td>
+
+                                                            <span
+                                                                className={
+                                                                    `inventory-stock-badge ${product.stockStatus ===
+                                                                        'Out of Stock'
+                                                                        ? 'out'
+                                                                        : product.stockStatus ===
+                                                                            'Low Stock'
+                                                                            ? 'low'
+                                                                            : 'available'
+                                                                    }`
+                                                                }
+                                                            >
+                                                                {product.stockStatus}
+                                                            </span>
+
+                                                        </td>
+
+                                                        <td>
+
+                                                            <span
+                                                                className={
+                                                                    product.isActive
+                                                                        ? 'inventory-product-status active'
+                                                                        : 'inventory-product-status inactive'
+                                                                }
+                                                            >
+                                                                {
+                                                                    product.isActive
+                                                                        ? 'Active'
+                                                                        : 'Inactive'
+                                                                }
+                                                            </span>
+
+                                                        </td>
+
+                                                    </tr>
+
+                                                )
+                                            )
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </section>
+
+                {/* ==============================================
+                    STOCK MANAGEMENT TABLE
                    ============================================== */}
 
                 <section className="inventory-table-card">
@@ -728,7 +1405,7 @@ function AdminInventoryPage() {
                         <div>
 
                             <span>
-                                Inventory
+                                Inventory Management
                             </span>
 
                             <h2>
@@ -747,9 +1424,7 @@ function AdminInventoryPage() {
                             Showing{' '}
 
                             <strong>
-                                {
-                                    filteredProducts.length
-                                }
+                                {filteredProducts.length}
                             </strong>
 
                             {' '}of{' '}
@@ -760,10 +1435,6 @@ function AdminInventoryPage() {
 
                     </div>
 
-                    {/* ==========================================
-                        SEARCH / FILTER
-                       ========================================== */}
-
                     <div className="inventory-toolbar">
 
                         <div className="inventory-search">
@@ -771,7 +1442,9 @@ function AdminInventoryPage() {
                             <input
                                 type="search"
                                 placeholder="Search name, SKU, category..."
-                                value={search}
+                                value={
+                                    search
+                                }
                                 onChange={
                                     event =>
                                         setSearch(
@@ -796,7 +1469,9 @@ function AdminInventoryPage() {
                         </div>
 
                         <select
-                            value={stockFilter}
+                            value={
+                                stockFilter
+                            }
                             onChange={
                                 event =>
                                     setStockFilter(
@@ -825,10 +1500,6 @@ function AdminInventoryPage() {
 
                     </div>
 
-                    {/* ==========================================
-                        EMPTY
-                       ========================================== */}
-
                     {filteredProducts.length === 0 ? (
 
                         <div className="inventory-empty">
@@ -854,37 +1525,21 @@ function AdminInventoryPage() {
 
                                     <tr>
 
-                                        <th>
-                                            Product
-                                        </th>
+                                        <th>Product</th>
 
-                                        <th>
-                                            SKU
-                                        </th>
+                                        <th>SKU</th>
 
-                                        <th>
-                                            Category
-                                        </th>
+                                        <th>Category</th>
 
-                                        <th>
-                                            Price
-                                        </th>
+                                        <th>Price</th>
 
-                                        <th>
-                                            Stock
-                                        </th>
+                                        <th>Stock</th>
 
-                                        <th>
-                                            Status
-                                        </th>
+                                        <th>Status</th>
 
-                                        <th>
-                                            Quantity
-                                        </th>
+                                        <th>Quantity</th>
 
-                                        <th>
-                                            Actions
-                                        </th>
+                                        <th>Actions</th>
 
                                     </tr>
 
@@ -892,206 +1547,188 @@ function AdminInventoryPage() {
 
                                 <tbody>
 
-                                    {filteredProducts.map(
-                                        product => {
+                                    {
+                                        filteredProducts
+                                            .map(
+                                                product => {
 
-                                            const isProcessing =
-                                                processingProductId ===
-                                                product.id
-
-                                            const quantity =
-                                                getAdjustmentQuantity(
-                                                    product.id
-                                                )
-
-                                            return (
-
-                                                <tr
-                                                    key={
+                                                    const isProcessing =
+                                                        processingProductId ===
                                                         product.id
-                                                    }
-                                                >
 
-                                                    <td
-                                                        data-label="Product"
-                                                    >
+                                                    const quantity =
+                                                        getAdjustmentQuantity(
+                                                            product.id
+                                                        )
 
-                                                        <div className="inventory-product">
+                                                    return (
 
-                                                            <div className="inventory-product-icon">
+                                                        <tr
+                                                            key={
+                                                                product.id
+                                                            }
+                                                        >
 
-                                                                {product.name
-                                                                    ?.charAt(0)
-                                                                    .toUpperCase()
-                                                                    || 'P'}
+                                                            <td data-label="Product">
 
-                                                            </div>
+                                                                <div className="inventory-product">
 
-                                                            <div>
+                                                                    <div className="inventory-product-icon">
+                                                                        {
+                                                                            product.name
+                                                                                ?.charAt(0)
+                                                                                .toUpperCase() ||
+                                                                            'P'
+                                                                        }
+                                                                    </div>
 
-                                                                <strong>
-                                                                    {
-                                                                        product.name
-                                                                    }
+                                                                    <div>
+
+                                                                        <strong>
+                                                                            {product.name}
+                                                                        </strong>
+
+                                                                        <span>
+                                                                            {
+                                                                                product.description ||
+                                                                                'No description'
+                                                                            }
+                                                                        </span>
+
+                                                                    </div>
+
+                                                                </div>
+
+                                                            </td>
+
+                                                            <td data-label="SKU">
+
+                                                                <span className="inventory-sku">
+                                                                    {product.sku}
+                                                                </span>
+
+                                                            </td>
+
+                                                            <td data-label="Category">
+
+                                                                {
+                                                                    getCategoryName(
+                                                                        product.categoryId
+                                                                    )
+                                                                }
+
+                                                            </td>
+
+                                                            <td data-label="Price">
+
+                                                                ₹{Number(
+                                                                    product.price
+                                                                ).toLocaleString(
+                                                                    'en-IN'
+                                                                )}
+
+                                                            </td>
+
+                                                            <td data-label="Stock">
+
+                                                                <strong className="inventory-stock-number">
+                                                                    {product.stockQuantity}
                                                                 </strong>
 
-                                                                <span>
+                                                            </td>
+
+                                                            <td data-label="Status">
+
+                                                                <span
+                                                                    className={
+                                                                        `inventory-stock-badge ${getStockStatusClass(
+                                                                            product.stockQuantity
+                                                                        )}`
+                                                                    }
+                                                                >
                                                                     {
-                                                                        product.description ||
-                                                                        'No description'
+                                                                        getStockStatus(
+                                                                            product.stockQuantity
+                                                                        )
                                                                     }
                                                                 </span>
 
-                                                            </div>
+                                                            </td>
 
-                                                        </div>
+                                                            <td data-label="Quantity">
 
-                                                    </td>
+                                                                <input
+                                                                    className="inventory-quantity-input"
+                                                                    type="number"
+                                                                    min="1"
+                                                                    step="1"
+                                                                    value={
+                                                                        quantity
+                                                                    }
+                                                                    disabled={
+                                                                        isProcessing
+                                                                    }
+                                                                    onChange={
+                                                                        event =>
+                                                                            handleAdjustmentQuantityChange(
+                                                                                product.id,
+                                                                                event.target.value
+                                                                            )
+                                                                    }
+                                                                />
 
-                                                    <td
-                                                        data-label="SKU"
-                                                    >
+                                                            </td>
 
-                                                        <span className="inventory-sku">
-                                                            {
-                                                                product.sku
-                                                            }
-                                                        </span>
+                                                            <td data-label="Actions">
 
-                                                    </td>
+                                                                <div className="inventory-actions">
 
-                                                    <td
-                                                        data-label="Category"
-                                                    >
-                                                        {
-                                                            getCategoryName(
-                                                                product.categoryId
-                                                            )
-                                                        }
-                                                    </td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="inventory-add-button"
+                                                                        disabled={
+                                                                            isProcessing
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleIncreaseStock(
+                                                                                product
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            isProcessing
+                                                                                ? 'Working...'
+                                                                                : '+ Add'
+                                                                        }
+                                                                    </button>
 
-                                                    <td
-                                                        data-label="Price"
-                                                    >
+                                                                    <button
+                                                                        type="button"
+                                                                        className="inventory-remove-button"
+                                                                        disabled={
+                                                                            isProcessing ||
+                                                                            product.stockQuantity ===
+                                                                            0
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleDecreaseStock(
+                                                                                product
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        - Remove
+                                                                    </button>
 
-                                                        ₹{Number(
-                                                            product.price
-                                                        ).toLocaleString(
-                                                            'en-IN'
-                                                        )}
+                                                                </div>
 
-                                                    </td>
+                                                            </td>
 
-                                                    <td
-                                                        data-label="Stock"
-                                                    >
+                                                        </tr>
 
-                                                        <strong className="inventory-stock-number">
-                                                            {
-                                                                product.stockQuantity
-                                                            }
-                                                        </strong>
-
-                                                    </td>
-
-                                                    <td
-                                                        data-label="Status"
-                                                    >
-
-                                                        <span
-                                                            className={
-                                                                `inventory-stock-badge ${getStockStatusClass(
-                                                                    product.stockQuantity
-                                                                )
-                                                                }`
-                                                            }
-                                                        >
-                                                            {
-                                                                getStockStatus(
-                                                                    product.stockQuantity
-                                                                )
-                                                            }
-                                                        </span>
-
-                                                    </td>
-
-                                                    <td
-                                                        data-label="Quantity"
-                                                    >
-
-                                                        <input
-                                                            className="inventory-quantity-input"
-                                                            type="number"
-                                                            min="1"
-                                                            step="1"
-                                                            value={
-                                                                quantity
-                                                            }
-                                                            disabled={
-                                                                isProcessing
-                                                            }
-                                                            onChange={
-                                                                event =>
-                                                                    handleAdjustmentQuantityChange(
-                                                                        product.id,
-                                                                        event.target.value
-                                                                    )
-                                                            }
-                                                        />
-
-                                                    </td>
-
-                                                    <td
-                                                        data-label="Actions"
-                                                    >
-
-                                                        <div className="inventory-actions">
-
-                                                            <button
-                                                                type="button"
-                                                                className="inventory-add-button"
-                                                                disabled={
-                                                                    isProcessing
-                                                                }
-                                                                onClick={() =>
-                                                                    handleIncreaseStock(
-                                                                        product
-                                                                    )
-                                                                }
-                                                            >
-                                                                {
-                                                                    isProcessing
-                                                                        ? 'Working...'
-                                                                        : '+ Add'
-                                                                }
-                                                            </button>
-
-                                                            <button
-                                                                type="button"
-                                                                className="inventory-remove-button"
-                                                                disabled={
-                                                                    isProcessing ||
-                                                                    product.stockQuantity ===
-                                                                    0
-                                                                }
-                                                                onClick={() =>
-                                                                    handleDecreaseStock(
-                                                                        product
-                                                                    )
-                                                                }
-                                                            >
-                                                                - Remove
-                                                            </button>
-
-                                                        </div>
-
-                                                    </td>
-
-                                                </tr>
-
+                                                    )
+                                                }
                                             )
-                                        }
-                                    )}
+                                    }
 
                                 </tbody>
 
@@ -1106,6 +1743,41 @@ function AdminInventoryPage() {
             </div>
 
         </main>
+    )
+}
+
+// ============================================================
+// SUMMARY CARD
+// ============================================================
+
+function InventorySummaryCard({
+    label,
+    value,
+    description,
+    className = ''
+}) {
+
+    return (
+
+        <article
+            className={
+                `inventory-summary-card ${className}`
+            }
+        >
+
+            <span>
+                {label}
+            </span>
+
+            <strong>
+                {value}
+            </strong>
+
+            <small>
+                {description}
+            </small>
+
+        </article>
     )
 }
 

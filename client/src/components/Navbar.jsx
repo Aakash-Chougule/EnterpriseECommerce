@@ -479,6 +479,26 @@ function Navbar() {
                                                     )
                                                 }
 
+                                                {
+                                                    (
+                                                        isMainAdmin ||
+                                                        hasPermission(
+                                                            'ViewReports'
+                                                        )
+                                                    ) &&
+                                                    (
+                                                        <NavLink
+                                                            to="/admin/reports"
+                                                            className="dropdown-link"
+                                                            onClick={
+                                                                closeMenu
+                                                            }
+                                                        >
+                                                            Reports
+                                                        </NavLink>
+                                                    )
+                                                }
+
                                                 {/* DATA / REPORTS */}
 
                                                 {

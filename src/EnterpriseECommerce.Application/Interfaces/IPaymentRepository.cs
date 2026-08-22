@@ -4,11 +4,26 @@ namespace EnterpriseECommerce.Application.Interfaces;
 
 public interface IPaymentRepository
 {
-    Task<Payment?> GetByIdAsync(Guid id);
+    Task<Payment?> GetByIdAsync(
+        Guid id);
 
-    Task<Payment?> GetByOrderIdAsync(Guid orderId);
+    Task<Payment?> GetByOrderIdAsync(
+        Guid orderId);
 
-    Task AddAsync(Payment payment);
+    // ========================================================
+    // ADMIN / REPORTING
+    // ========================================================
 
-    Task UpdateAsync(Payment payment);
+    Task<IEnumerable<Payment>>
+        GetAllAsync();
+
+    // ========================================================
+    // COMMANDS
+    // ========================================================
+
+    Task AddAsync(
+        Payment payment);
+
+    Task UpdateAsync(
+        Payment payment);
 }
